@@ -2,7 +2,7 @@
 <html lang="es" class="dark">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>ZXC - Perfil</title>
+    <title>YLO Extractor HCM</title>
     <script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
@@ -129,7 +129,7 @@
         if (theme === 'light') {document.documentElement.classList.add('light-mode');} 
         else {document.documentElement.classList.remove('light-mode');}
     }
-    function logout(){localStorage.clear();window.location.href='index_SPA1.html'}
+    function logout(){localStorage.clear();window.location.href='index.html'}
 </script>
 
 <script>
@@ -348,12 +348,12 @@ async function handleEditSubmit(e) {
     }
 }
 
-    function handleThemeToggle() {
-        // Llamamos a tu función original que cambia la clase en el HTML
-        toggleTheme(); 
-        // Refrescamos solo el perfil para actualizar el texto de "Tema App" y la posición del switch
-        renderProfile();
-    }
+function handleThemeToggle() {
+    // Llamamos a tu función original que cambia la clase en el HTML
+    toggleTheme(); 
+    // Refrescamos solo el perfil para actualizar el texto de "Tema App" y la posición del switch
+    renderProfile();
+}
 
 function toggleVisualTheme(btn) {
     const input = document.getElementById('Usuario_Tema');
