@@ -415,7 +415,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         // Verificación de seguridad
         if(!localStorage.getItem(KEYS.CORREO)) {
-            window.location.replace('index.html');
+            window.location.replace('index_SPA2.html');
             return;
         }
         
@@ -507,7 +507,7 @@
         if (tiendaIdDisplay && tiendaIdValue) tiendaIdDisplay.textContent = tiendaIdValue; fetchData(currentTableName);
     }
 
-    function logout(){localStorage.clear();window.location.href='index.html'}    
+    function logout(){localStorage.clear();window.location.href='index_SPA2.html'}    
 
     // 3. GESTIÓN DE VISTA (Mobile/Desktop)
     function adjustLayoutForOrientation() {
@@ -876,18 +876,18 @@ function renderTable(data) {
     const typeRegField = `${prefix}TYPEREG`;  // Campo oculto para estado de bloqueo
     
     // Definición del campo 'f' para duplicados según la tabla
-    let f = "";
+    let fieldDuplicate = "";
     if (tablaOrigen.includes("TD101")) {
-        f = "TD101FACTURA";
+        fieldDuplicate = "TD101FACTURA";
     } else if (tablaOrigen.includes("TD102")) {
-        f = "TD102POLIZA";
+        fieldDuplicate = "TD102POLIZA";
     }
 
     // 3. CONTEO PREVIO PARA DUPLICADOS
     const counts = {};
-    if (f) {
+    if (fieldDuplicate) {
         data.forEach(row => {
-            const val = String(row[f] || "").trim().toUpperCase();
+            const val = String(row[fieldDuplicate] || "").trim().toUpperCase();
             if (val !== "" && val !== "0") {
                 counts[val] = (counts[val] || 0) + 1;
             }
@@ -944,8 +944,8 @@ function renderTable(data) {
         const tr = document.createElement('tr');
         
         // Verificación de duplicidad para el estilo de fila
-        const valorF = f ? String(row[f] || "").trim().toUpperCase() : "";
-        const esDuplicado = f && counts[valorF] > 1;
+        const valorF = fieldDuplicate ? String(row[fieldDuplicate] || "").trim().toUpperCase() : "";
+        const esDuplicado = fieldDuplicate && counts[valorF] > 1;
 
         if (esDuplicado) {
             tr.className = 'cursor-pointer bg-amber-950/30 hover:bg-amber-900/40 text-amber-400 transition-colors group border-b border-amber-800/20';
@@ -1009,7 +1009,7 @@ function renderTable(data) {
             }
 
             // Renderizado final (Duplicado vs Normal)
-            if (h === f && esDuplicado) {
+            if (h === fieldDuplicate && esDuplicado) {
                 td.innerHTML = `<span class="bg-amber-500/20 px-1 rounded border border-amber-500/30">⚠️ ${val}</span>`;
             } else {
                 td.innerHTML = highlightText(val, currentSearchTerm);
@@ -2218,236 +2218,213 @@ function openDetailModal(row) {
         renderColumnConfig(); 
     }
 
-    async function saveRecord() {
-        toggleGlobalLoader(true, "Procesando Registro...", "Sincronizando valores en la base de datos GAS<br>Por favor, espere.");
+async function saveRecord() {
+    toggleGlobalLoader(true, "Procesando Registro...", "Sincronizando valores en la base de datos GAS<br>Por favor, espere.");
 
-        const container = document.getElementById('detail-modal-content');
-        const inputs = container.querySelectorAll('[data-field]');
-        const configMapRaw = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
-        const configMap = {};
-        Object.keys(configMapRaw).forEach(k => configMap[k.toUpperCase()] = configMapRaw[k]);
+    const container = document.getElementById('detail-modal-content');
+    const inputs = container.querySelectorAll('[data-field]');
+    const configMapRaw = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
+    const configMap = {};
+    Object.keys(configMapRaw).forEach(k => configMap[k.toUpperCase()] = configMapRaw[k]);
 
-        let missingFields = [];
-        let payload = {};
+    let missingFields = [];
+    let payload = {};
 
-        // 1. LIMPIEZA DE ERRORES VISUALES
-        inputs.forEach(i => {
-            i.classList.remove('border-red-500', 'bg-red-500/10');
-            i.classList.add('border-transparent'); 
-        });
+    // 1. LIMPIEZA DE ERRORES VISUALES
+    inputs.forEach(i => {
+        i.classList.remove('border-red-500', 'bg-red-500/10');
+        i.classList.add('border-transparent'); 
+    });
 
-        // 2. EXTRACCIÓN Y FORMATEO DE DATOS
-        inputs.forEach(input => {
-            const key = input.dataset.field;
-            const cleanKey = key.toUpperCase();
-            const cfg = configMap[cleanKey] || {};
-            const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('EMISION') || cleanKey.includes('VIGENCIA');
-            const isNumeric = cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO') || cleanKey.includes('PRIMA') || cleanKey.includes('TASAREF');
-            const isTextArea = input.tagName.toLowerCase() === 'textarea';
-            
-            let value;
-            if (input.hasAttribute('data-raw')) {
-                value = input.getAttribute('data-raw');
-            } else if (input.type === 'checkbox') {
-                value = input.checked;
-            } else {
-                value = input.value.trim();
+    // 2. EXTRACCIÓN Y FORMATEO DE DATOS
+    inputs.forEach(input => {
+        const key = input.dataset.field;
+        const cleanKey = key.toUpperCase();
+        const cfg = configMap[cleanKey] || {};
+        const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('EMISION') || cleanKey.includes('VIGENCIA');
+        
+        // Excluimos TASAREF y MONTOML2 para que no sean tratados como strings editables
+        const isNumeric = (cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO') || cleanKey.includes('PRIMA')) && 
+                          !cleanKey.endsWith('TASAREF') && !cleanKey.endsWith('MONTOML2');
+        
+        const isTextArea = input.tagName.toLowerCase() === 'textarea';
+        
+        let value;
+        if (input.hasAttribute('data-raw')) {
+            value = input.getAttribute('data-raw');
+        } else if (input.type === 'checkbox') {
+            value = input.checked;
+        } else {
+            value = input.value.trim();
 
-                // 1. TRATAMIENTO ESPECÍFICO PARA LA FACTURA
-                if (cleanKey === 'TD101FACTURA') {
-                    // Aseguramos que sea string y eliminamos cualquier rastro de punto o coma 
-                    // que la máscara pudo haber puesto por error
-                    value = String(input.value).replace(/\D/g, '').trim(); 
-                }
-
-                // 2. TRATAMIENTO PARA NÚMEROS (Soporta Negativos)
-                if (isNumeric && value && cleanKey !== 'TD101FACTURA') {
-                    let cleanNum = String(value).replace(/\./g, '').replace(',', '.').replace(/[^-0-9.]/g, '');
-                    let num = parseFloat(cleanNum);
-                    value = !isNaN(num) ? num : 0;
-                } 
-                // 3. TRATAMIENTO PARA TEXTO
-                else if (!isTextArea && !isDate && typeof value === 'string') {
-                    value = value.toUpperCase();
-                }
+            if (cleanKey === 'TD101FACTURA') {
+                value = String(value);
             }
 
-            // --- FORMATEO ESTRICTO DE FECHA ---
-            if (isDate && value && typeof value === 'string') {
-                const isVigencia = cleanKey.includes('VIGENCIA'); // Detectar particularidad
-                let dateOnly = value.split('T')[0].split(' ')[0].trim();
-                
-                if (dateOnly.includes('-')) {
-                    const parts = dateOnly.split('-');
-                    if (parts.length === 3 && parts[0].length === 4) {
-                        // Formato estándar DD/MM/YYYY
-                        value = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                    }
-                } else {
-                    value = dateOnly;
+            // TRATAMIENTO PARA NÚMEROS EDITABLES (Lógica Inteligente)
+            if (isNumeric && value && cleanKey !== 'TD101FACTURA') {
+                let cleanNum = String(value);
+                if (cleanNum.includes(',') && cleanNum.includes('.')) {
+                    cleanNum = cleanNum.replace(/\./g, '').replace(',', '.');
+                } else if (cleanNum.includes(',')) {
+                    cleanNum = cleanNum.replace(',', '.');
                 }
-
-                // PARTICULARIDAD: Si es VIGENCIA, añadimos la hora exacta
-                if (isVigencia && value) {
-                    // Resultado: "DD/MM/YYYY 00:00:00"
-                    value = `${value} 00:00:00`;
-                }
+                cleanNum = cleanNum.replace(/[^-0-9.]/g, '');
+                let num = parseFloat(cleanNum);
+                value = !isNaN(num) ? num : 0;
+            } 
+            else if (!isTextArea && !isDate && typeof value === 'string') {
+                value = value.toUpperCase();
             }
-
-            // --- MEJORA: PRESERVAR 0,00 Y VALIDAR CAMPOS VACÍOS ---
-            // Definimos que un campo está vacío SOLO si no tiene contenido (el 0 es contenido válido)
-            const isActuallyEmpty = (value === '' || value === null || value === undefined);
-
-            if (cfg.Es_Obligatorio === true && isActuallyEmpty) {
-                missingFields.push(cfg.label || key);
-                input.classList.add('border-red-500', 'bg-red-500/10');
-            }
-
-            // Si es numérico y está vacío, aseguramos que viaje como 0 y no como cadena vacía
-            if (isNumeric && isActuallyEmpty) {
-                payload[key] = 0;
-            } else {
-                payload[key] = value;
-            }
-        });
-
-        // --- 3. VALIDACIONES DE NEGOCIO (BLOQUEO) ---
-        const tablePrefix = currentTableName.split('_')[0].toUpperCase();
-        const keyImporte = `${tablePrefix}IMPORTE`;
-
-        if (missingFields.length > 0) {
-            toggleGlobalLoader(false);
-            const listaHtml = missingFields.map(field => `• ${field}`).join('<br>');
-            await showSystemModal({ title: 'Campos Obligatorios', text: `Complete:<br><br>${listaHtml}`, type: 'warning' });
-            return; 
         }
 
-        // VALIDACIÓN DE IMPORTE (Solo si el campo existe en la tabla actual)
-        if (Object.prototype.hasOwnProperty.call(payload, keyImporte)) {
-            // Obtenemos el valor numérico (ya procesado en el paso anterior)
-            const valorImporte = parseFloat(payload[keyImporte]);
+        // --- FORMATEO ESTRICTO DE FECHA ---
+        if (isDate && value && typeof value === 'string') {
+            const isVigencia = cleanKey.includes('VIGENCIA');
+            let dateOnly = value.split('T')[0].split(' ')[0].trim();
+            
+            if (dateOnly.includes('-')) {
+                const parts = dateOnly.split('-');
+                if (parts.length === 3 && parts[0].length === 4) {
+                    value = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+            } else {
+                value = dateOnly;
+            }
 
-            // Si se requiere que el importe sea estrictamente mayor a 0 (puedes ajustar a < 0 si permites negativos)
-            if (isNaN(valorImporte) || valorImporte === 0) {
+            if (isVigencia && value) {
+                value = `${value} 00:00:00`;
+            }
+        }
+
+        const isActuallyEmpty = (value === '' || value === null || value === undefined);
+
+        if (cfg.Es_Obligatorio === true && isActuallyEmpty) {
+            missingFields.push(cfg.label || key);
+            input.classList.add('border-red-500', 'bg-red-500/10');
+        }
+
+        if (isNumeric && isActuallyEmpty) {
+            payload[key] = 0;
+        } else {
+            payload[key] = value;
+        }
+    });
+
+    // --- 3. LÓGICA DE CAMPOS CALCULADOS (TASAREF 5 dec / MONTOML2 2 dec) ---
+    const montoPagado = parseFloat(payload['TD101MONTOPAGADO']) || 0;
+    const montoPrima = parseFloat(payload['TD101MONTOPRIMA']) || 0;
+    const montoTotal = parseFloat(payload['TD101MONTOTOTAL']) || 0;
+
+    // Cálculo Tasa: Redondeo a 5 decimales
+    let tasaCalculada = montoPrima !== 0 ? (montoPagado / montoPrima) : 0;
+    payload['TD101TASAREF'] = Math.round(tasaCalculada * 100000) / 100000;
+
+    // Cálculo Monto ML2: Redondeo a 2 decimales
+    let ml2Calculado = payload['TD101TASAREF'] * montoTotal;
+    payload['TD101MONTOML2'] = Math.round(ml2Calculado * 100) / 100;
+
+    // --- 4. VALIDACIONES DE NEGOCIO ---
+    const tablePrefix = currentTableName.split('_')[0].toUpperCase();
+    const keyImporte = `${tablePrefix}IMPORTE`;
+
+    if (missingFields.length > 0) {
+        toggleGlobalLoader(false);
+        const listaHtml = missingFields.map(field => `• ${field}`).join('<br>');
+        await showSystemModal({ title: 'Campos Obligatorios', text: `Complete:<br><br>${listaHtml}`, type: 'warning' });
+        return; 
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, keyImporte)) {
+        const valorImporte = parseFloat(payload[keyImporte]);
+        if (isNaN(valorImporte) || valorImporte === 0) {
+            toggleGlobalLoader(false);
+            const inputImporte = container.querySelector(`[data-field="${keyImporte}"]`);
+            if (inputImporte) inputImporte.classList.add('border-red-500', 'bg-red-500/10');
+            await showSystemModal({ title: 'Importe Inválido', text: 'El campo <b>Importe</b> debe ser diferente a <b>0,00</b>.', type: 'warning' });
+            return;
+        }
+    }
+
+    // C. Traducción de Cuentas y Validación de Monedas
+    const badgeMode = document.getElementById('title-badge-mode')?.innerText.toUpperCase() || '';
+    const matrizCuentas = JSON.parse(localStorage.getItem('MATRIZ_CUENTAS_USUARIO') || "[]");
+    const monedaTransaccion = String(payload[`${tablePrefix}MONEDA`] || "").trim().toUpperCase();
+
+    const aliasEmisora = payload[`${tablePrefix}ALIASCUENTA`];
+    let infoEmisora = null;
+
+    if (aliasEmisora && matrizCuentas.length > 0) {
+        infoEmisora = matrizCuentas.find(c => String(c.TD102ALIAS || c.ALIAS).trim() === String(aliasEmisora).trim());
+        if (infoEmisora) {
+            const monedaE = infoEmisora.TD102MONEDA;
+            if (monedaTransaccion && monedaE && monedaTransaccion !== monedaE) {
                 toggleGlobalLoader(false);
-                const inputImporte = container.querySelector(`[data-field="${keyImporte}"]`);
-                if (inputImporte) inputImporte.classList.add('border-red-500', 'bg-red-500/10');
+                container.querySelector(`[data-field$="ALIASCUENTA"]`)?.classList.add('border-red-500', 'bg-red-500/10');
+                await showSystemModal({ title: 'Inconsistencia de Moneda', text: `La moneda (<b>${monedaTransaccion}</b>) no coincide con la cuenta (<b>${monedaE}</b>).`, type: 'error' });
+                return;
+            }
+            payload[`${tablePrefix}CUENTA`] = infoEmisora.TD102ID || infoEmisora.ID;
+        }
+    }
 
-                await showSystemModal({ 
-                    title: 'Importe Inválido', 
-                    text: 'El campo <b>Importe</b> debe ser un monto diferente a <b>0,00</b>.', 
-                    type: 'warning' 
-                });
+    if (badgeMode.includes('TR')) {
+        const aliasReceptora = payload[`${tablePrefix}CUENTA2`];
+        let infoReceptora = null;
+        if (aliasReceptora && matrizCuentas.length > 0) {
+            infoReceptora = matrizCuentas.find(c => String(c.TD102ALIAS || c.ALIAS).trim() === String(aliasReceptora).trim());
+            if (infoReceptora) {
+                payload[`${tablePrefix}CUENTA2`] = infoReceptora.TD102ID || infoReceptora.ID;
+                payload[`${tablePrefix}ALIASCUENTA2`] = aliasReceptora;
+            }
+        }
+        if (infoEmisora && infoReceptora) {
+            if ((infoEmisora.TD102ID || infoEmisora.ID) === (infoReceptora.TD102ID || infoReceptora.ID)) {
+                toggleGlobalLoader(false);
+                await showSystemModal({ title: 'Error', text: 'Cuentas origen y destino iguales.', type: 'error' });
                 return;
             }
         }
-
-        // C. Traducción de Cuentas y Validación de Monedas/Negocio
-        const badgeMode = document.getElementById('title-badge-mode')?.innerText.toUpperCase() || '';
-        const matrizCuentas = JSON.parse(localStorage.getItem('MATRIZ_CUENTAS_USUARIO') || "[]");
-        const monedaTransaccion = String(payload[`${tablePrefix}MONEDA`] || "").trim().toUpperCase();
-
-        // Procesamiento de Cuenta Emisora
-        const aliasEmisora = payload[`${tablePrefix}ALIASCUENTA`];
-        let infoEmisora = null;
-
-        if (aliasEmisora && matrizCuentas.length > 0) {
-            infoEmisora = matrizCuentas.find(c => String(c.TD102ALIAS || c.ALIAS).trim() === String(aliasEmisora).trim());
-            if (infoEmisora) {
-                const monedaE = infoEmisora.TD102MONEDA;
-                if (monedaTransaccion && monedaE && monedaTransaccion !== monedaE) {
-                    toggleGlobalLoader(false);
-                    container.querySelector(`[data-field$="ALIASCUENTA"]`)?.classList.add('border-red-500', 'bg-red-500/10');
-                    await showSystemModal({ 
-                        title: 'Inconsistencia de Moneda', 
-                        text: `La moneda del registro (<b>${monedaTransaccion}</b>) no coincide con la moneda de la cuenta seleccionada (<b>${monedaE}</b>).`, 
-                        type: 'error' 
-                    });
-                    return;
-                }
-                payload[`${tablePrefix}CUENTA`] = infoEmisora.TD102ID || infoEmisora.ID;
-            }
-        }
-
-        // Lógica para Modo Transferencia (TR)
-        if (badgeMode.includes('TR')) {
-            const aliasReceptora = payload[`${tablePrefix}CUENTA2`];
-            let infoReceptora = null;
-
-            if (aliasReceptora && matrizCuentas.length > 0) {
-                infoReceptora = matrizCuentas.find(c => String(c.TD102ALIAS || c.ALIAS).trim() === String(aliasReceptora).trim());
-                if (infoReceptora) {
-                    payload[`${tablePrefix}CUENTA2`] = infoReceptora.TD102ID || infoReceptora.ID;
-                    payload[`${tablePrefix}ALIASCUENTA2`] = aliasReceptora;
-                }
-            }
-
-            if (infoEmisora && infoReceptora) {
-                const idE = infoEmisora.TD102ID || infoEmisora.ID;
-                const idR = infoReceptora.TD102ID || infoReceptora.ID;
-                const monedaE = infoEmisora.TD102MONEDA;
-                const monedaR = infoReceptora.TD102MONEDA;
-
-                if (idE === idR) {
-                    toggleGlobalLoader(false);
-                    container.querySelectorAll(`[data-field$="ALIASCUENTA"], [data-field$="CUENTA2"]`).forEach(el => el.classList.add('border-red-500', 'bg-red-500/10'));
-                    await showSystemModal({ title: 'Error en Transferencia', text: 'La <b>Cuenta Emisora</b> y la <b>Cuenta Receptora</b> no pueden ser iguales.', type: 'error' });
-                    return;
-                }
-
-                if (monedaE !== monedaR) {
-                    toggleGlobalLoader(false);
-                    container.querySelectorAll(`[data-field$="ALIASCUENTA"], [data-field$="CUENTA2"]`).forEach(el => el.classList.add('border-red-500', 'bg-red-500/10'));
-                    await showSystemModal({ title: 'Conflicto de Moneda', text: `En transferencias, ambas cuentas deben manejar la misma moneda.<br><br>Origen: <b>${monedaE}</b><br>Destino: <b>${monedaR}</b>`, type: 'error' });
-                    return;
-                }
-            }
-        }
-
-        // 4. PREPARACIÓN DE ENVÍO
-        const isNewOrDuplicate = badgeMode.includes('BORRADOR') || badgeMode.includes('DUPLICADO');
-        const gasAction = isNewOrDuplicate ? 'registerDynamicDataTD' : 'editDynamicDataTD';
-        const userId = localStorage.getItem('Usuario_ID') || ""; 
-
-        const keyStatus = `${tablePrefix}TYPEREG`;
-        if (payload[keyStatus]) {
-            payload[keyStatus] = String(payload[keyStatus]).toUpperCase();
-        }
-
-        if (isNewOrDuplicate) {
-            delete payload[`${tablePrefix}ID`];
-            payload[`${tablePrefix}TYPEREG`] = "REGISTRADO";
-            payload[`${tablePrefix}IDOWNER`] = userId;      
-        }
-
-        const finalPayload = {
-            ...payload,
-            action: gasAction,
-            tiendaId: localStorage.getItem(KEYS.TIENDA_ID), 
-            TABLA_DESTINO: currentTableName,
-            currentUser: userId
-        };
-
-        // 5. ENVÍO ÚNICO
-        const createdRecord = await executeSubmit(finalPayload); 
-
-        if (createdRecord) {
-            const loaderLabel = document.querySelector('#global-loader span');
-            if (loaderLabel) loaderLabel.innerHTML = "Sincronizando registros...<br>Actualizando vista de tabla.";
-
-            needsRefresh = true; 
-            await fetchData(currentTableName); 
-
-            document.getElementById('detail-modal')?.classList.add('hidden');
-            toggleGlobalLoader(false);
-            
-            await showSystemModal({ title: 'Proceso Completado', text: 'Solicitud ejecutada correctamente.', type: 'info' });
-            if (createdRecord) openDetailModal(createdRecord);
-        } else {
-            toggleGlobalLoader(false);
-            showSystemModal({ title: 'Error', text: 'No se pudo guardar el registro.', type: 'error' });
-        }
     }
+
+    // 5. ENVÍO
+    const isNewOrDuplicate = badgeMode.includes('BORRADOR') || badgeMode.includes('DUPLICADO');
+    const gasAction = isNewOrDuplicate ? 'registerDynamicDataTD' : 'editDynamicDataTD';
+    const userId = localStorage.getItem('Usuario_ID') || ""; 
+
+    if (isNewOrDuplicate) {
+        delete payload[`${tablePrefix}ID`];
+        payload[`${tablePrefix}TYPEREG`] = "REGISTRADO";
+        payload[`${tablePrefix}IDOWNER`] = userId;      
+    }
+
+    const finalPayload = {
+        ...payload,
+        action: gasAction,
+        tiendaId: localStorage.getItem(KEYS.TIENDA_ID), 
+        TABLA_DESTINO: currentTableName,
+        currentUser: userId
+    };
+
+    const createdRecord = await executeSubmit(finalPayload); 
+
+    if (createdRecord) {
+        const loaderLabel = document.querySelector('#global-loader span');
+        if (loaderLabel) loaderLabel.innerHTML = "Sincronizando registros...<br>Actualizando vista de tabla.";
+
+        needsRefresh = true; 
+        await fetchData(currentTableName); 
+
+        document.getElementById('detail-modal')?.classList.add('hidden');
+        toggleGlobalLoader(false);
+        
+        await showSystemModal({ title: 'Proceso Completado', text: 'Solicitud ejecutada correctamente.', type: 'info' });
+        if (createdRecord) openDetailModal(createdRecord);
+    } else {
+        toggleGlobalLoader(false);
+        showSystemModal({ title: 'Error', text: 'No se pudo guardar el registro.', type: 'error' });
+    }
+}
 
     async function saveCurrentConfig() {
         if (!currentTableName) return;
@@ -3460,7 +3437,7 @@ async function processAndShowModal(file) {
 
         if (sourceData.length > 0) {
             // Auxiliar: Limpiador de montos
-            const cleanM = (val) => String(val || "").replace(/[.,\s]/g, "");
+            //const cleanM = (val) => String(val || "").replace(/[.,\s]/g, "");
 
             // Auxiliar: Normalizador de fechas (ISO vs DD/MM/YYYY)
             const toCompareDate = (val) => {
@@ -3479,18 +3456,21 @@ async function processAndShowModal(file) {
             const nuevoP = String(registroPdf.TD101POLIZA || "").trim().toUpperCase();
             const nuevoF = toCompareDate(registroPdf.TD101FECHAEMISION);
             const nuevoM = cleanM(registroPdf.TD101MONTOTOTAL);
+            const nuevofx = cleanM(registroPdf.TD101FACTURA);
 
             const esDuplicado = sourceData.some((row) => {
                 const filaP = String(row.TD101POLIZA || "").trim().toUpperCase();
                 const filaF = toCompareDate(row.TD101FECHAEMISION);
                 const filaM = cleanM(row.TD101MONTOTOTAL);
-                return (filaP === nuevoP && filaF === nuevoF && filaM === nuevoM);
+                const filafx = cleanM(row.TD101FACTURA);
+                return (filaP === nuevoP && filaF === nuevoF && filaM === nuevoM && filafx === nuevofx);
             });
 
             if (esDuplicado) {
                 const msg = `<b>¡POSIBLE DUPLICADO DETECTADO!</b><br><br>` +
                             `<div class="text-left inline-block">` + // Contenedor para justificar a la izquierda
                                 `• <b>Póliza:</b> ${nuevoP}<br>` +
+                                `• <b>Recibo:</b> ${registroPdf.TD101FACTURA}<br>` +
                                 `• <b>Fecha:</b> ${registroPdf.TD101FECHAEMISION}<br>` +
                                 `• <b>Monto Total:</b> ${registroPdf.TD101MONTOTOTAL}` +
                             `</div><br><br>` +
