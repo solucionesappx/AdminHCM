@@ -576,7 +576,7 @@
 
         // 5. FECHAS Y HORAS 
         if (cleanKey.includes('REGISTRODATA') || cleanKey.includes('VIGENCIA')) return formatDateTime(value);
-        if (cleanKey.includes('FECHA')) return formatDate(value);
+        if (cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('PERIODO')) return formatDate(value);
         
         // 6. TRATAMIENTO NUMÉRICO 
         const esAlfanumerico = /[a-zA-Z]/.test(stringValue) && /\d/.test(stringValue);
@@ -980,7 +980,7 @@ function renderTable(data) {
             } else {
                 if (cleanH.includes('IMPORTE') || cleanH.includes('MONTO')) {
                     td.style.textAlign = 'right';
-                } else if (cleanH.includes('FECHA') || cleanH.includes('DATE') || cleanH.endsWith('NUMERO')) {
+                } else if (cleanH.includes('FECHA') || cleanH.includes('DATE') || cleanH.includes('PERIODO') || cleanH.endsWith('NUMERO')) {
                     td.style.textAlign = 'center';
                 } else {
                     td.style.textAlign = 'left';
@@ -1000,7 +1000,7 @@ function renderTable(data) {
             }
 
             // Formateo de Fechas
-            if (cleanH.includes('FECHA') || cleanH.includes('DATE')) {
+            if (cleanH.includes('FECHA') || cleanH.includes('DATE') || cleanH.includes('PERIODO')) {
                 const d = new Date(row[h]);
                 if (!isNaN(d.getTime())) {
                     val = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
@@ -2172,7 +2172,7 @@ function openDetailModal(row) {
 
     async function setColumnFilter(idx) {
         const col = currentHeadersConfig[idx];
-        const isDate = col.label.toUpperCase().includes('FECHA') || col.label.toUpperCase().includes('DATE');
+        const isDate = col.label.toUpperCase().includes('FECHA') || col.label.toUpperCase().includes('DATE') || col.label.toUpperCase().includes('PERIODO');
         
         let initialValue = col.filterValue || '';
 
@@ -2240,7 +2240,7 @@ async function saveRecord() {
         const key = input.dataset.field;
         const cleanKey = key.toUpperCase();
         const cfg = configMap[cleanKey] || {};
-        const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('EMISION') || cleanKey.includes('VIGENCIA');
+        const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('PERIODO') || cleanKey.includes('EMISION') || cleanKey.includes('VIGENCIA');
         
         // Excluimos TASAREF y MONTOML2 para que no sean tratados como strings editables
         const isNumeric = (cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO') || cleanKey.includes('PRIMA')) && 
@@ -2689,7 +2689,7 @@ async function saveRecord() {
                 const isRequired = cfg.Es_Obligatorio === true || String(cfg.Es_Obligatorio).toLowerCase() === "true";
                 const asterisco = isRequired ? '<span class="text-red-500 ml-1 font-bold">*</span>' : '';
                 const istoggle = cleanKey.includes('TYPEREG');
-                const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('VIGENCIA');
+                const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('VIGENCIA') || cleanKey.includes('PERIODO');
                 const isNumeric = cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO');
                 
                 const dictKey = `${currentTableName}|${key}`.toUpperCase();
@@ -2904,7 +2904,7 @@ async function saveRecord() {
                 );
 
                 const isDescription = cleanKey.includes('DESCRIPCION');
-                const isDate = cleanKey.includes('DATE') || cleanKey.includes('FECHA');
+                const isDate = cleanKey.includes('DATE') || cleanKey.includes('FECHA') || cleanKey.includes('PERIODO');
                 const isNumeric = cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO');
 
                 const rowItem = document.createElement('div');
@@ -3060,7 +3060,7 @@ async function saveRecord() {
 
             // Identificación de tipos para el renderizado
             const isDescription = cleanKey.includes('DESCRIPCION');
-            const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE');
+            const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('PERIODO');
             const isNumeric = cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO');
             
             const rowItem = document.createElement('div');
@@ -3320,7 +3320,7 @@ async function saveRecord() {
                                         <i data-lucide="search" class="w-3.5 h-3.5"></i>
                                     </div>
                                 </div>`;
-                        } else if (cleanKey.includes('FECHA') || cleanKey.includes('DATE')) {
+                        } else if (cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('PERIODO')) {
                             let dateISO = val.includes('/') ? val.split('/').reverse().join('-') : (val.includes('T') ? val.split('T')[0] : val);
                             valueElement = `<input type="date" data-field="${key}" value="${dateISO}" class="bg-gray-800/50 border border-transparent focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none">`;
                         } else if (cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO')) {
@@ -3638,7 +3638,7 @@ async function processAndShowModal(file) {
                     let val = row[h];
 
                     // A. Formateo de Fecha (DD/MM/YYYY)
-                    if (cleanH.includes('FECHA') || cleanH.includes('DATE')) {
+                    if (cleanH.includes('FECHA') || cleanH.includes('DATE') || cleanKey.includes('PERIODO')) {
                         const d = new Date(row[h]);
                         if (!isNaN(d.getTime())) {
                             val = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
