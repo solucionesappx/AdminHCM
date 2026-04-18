@@ -1614,9 +1614,7 @@ function showSystemModal({
         let desc = "Sincronizando con la base de datos GAS...";
 
         const action = String(payload.action || '').toLowerCase();
-
-//console.table(payload);
-        
+       
         if (action.includes('delete')) {
             title = "Eliminando Registro...";
             desc = "Eliminando el registro seleccionado del servidor...";
@@ -1685,47 +1683,47 @@ function showSystemModal({
         }
     }
 
-function normalizeToolbar() {
-    const ids = ['btn-modal-save', 'btn-modal-cancel', 'btn-modal-return'];
-    const titles = ['Duplicar', 'Borrar', 'Nuevo', 'Editar'];
+    function normalizeToolbar() {
+        const ids = ['btn-modal-save', 'btn-modal-cancel', 'btn-modal-return'];
+        const titles = ['Duplicar', 'Borrar', 'Nuevo', 'Editar'];
 
-    const allButtons = [
-        ...ids.map(id => document.getElementById(id)), 
-        ...titles.map(t => document.querySelector(`[title="${t}"]`))
-    ];
+        const allButtons = [
+            ...ids.map(id => document.getElementById(id)), 
+            ...titles.map(t => document.querySelector(`[title="${t}"]`))
+        ];
 
-    allButtons.forEach(btn => {
-        if (btn) {
-            btn.classList.remove('hidden', 'btn-disabled', 'opacity-20', 'grayscale', 'bg-red-500', 'bg-blue-500');
-            btn.style.cssText = 'pointer-events: auto; cursor: pointer; opacity: 1;';
-            const icon = btn.querySelector('i');
-            if (icon) icon.classList.remove('opacity-50');
-        }
-    });
+        allButtons.forEach(btn => {
+            if (btn) {
+                btn.classList.remove('hidden', 'btn-disabled', 'opacity-20', 'grayscale', 'bg-red-500', 'bg-blue-500');
+                btn.style.cssText = 'pointer-events: auto; cursor: pointer; opacity: 1;';
+                const icon = btn.querySelector('i');
+                if (icon) icon.classList.remove('opacity-50');
+            }
+        });
 
-    // Visibilidad por defecto: Solo "Regresar" visible
-    document.getElementById('btn-modal-save')?.classList.add('hidden');
-    document.getElementById('btn-modal-cancel')?.classList.add('hidden');
-    document.getElementById('btn-modal-return')?.classList.remove('hidden');
+        // Visibilidad por defecto: Solo "Regresar" visible
+        document.getElementById('btn-modal-save')?.classList.add('hidden');
+        document.getElementById('btn-modal-cancel')?.classList.add('hidden');
+        document.getElementById('btn-modal-return')?.classList.remove('hidden');
 
-    // Re-vinculación limpia
-    document.getElementById('btn-modal-save').onclick = (e) => { e.preventDefault(); saveRecord(); };
-    document.getElementById('btn-modal-cancel').onclick = (e) => { e.preventDefault(); cancelActualForm(); };
-    document.getElementById('btn-modal-return').onclick = (e) => { e.preventDefault(); closeDetailModal(); };
-    
-    // Vinculación por títulos (Usa selectores opcionales para evitar errores si el botón no existe en el DOM)
-    const assignClick = (title, fn) => {
-        const btn = document.querySelector(`[title="${title}"]`);
-        if (btn) btn.onclick = (e) => { e.preventDefault(); fn(); };
-    };
+        // Re-vinculación limpia
+        document.getElementById('btn-modal-save').onclick = (e) => { e.preventDefault(); saveRecord(); };
+        document.getElementById('btn-modal-cancel').onclick = (e) => { e.preventDefault(); cancelActualForm(); };
+        document.getElementById('btn-modal-return').onclick = (e) => { e.preventDefault(); closeDetailModal(); };
+        
+        // Vinculación por títulos (Usa selectores opcionales para evitar errores si el botón no existe en el DOM)
+        const assignClick = (title, fn) => {
+            const btn = document.querySelector(`[title="${title}"]`);
+            if (btn) btn.onclick = (e) => { e.preventDefault(); fn(); };
+        };
 
-    assignClick('Nuevo', showRegisterMode);
-    assignClick('Editar', showEditMode);
-    assignClick('Duplicar', duplicateCurrentRecord);
-    assignClick('Borrar', deleteRecord);
+        assignClick('Nuevo', showRegisterMode);
+        assignClick('Editar', showEditMode);
+        assignClick('Duplicar', duplicateCurrentRecord);
+        assignClick('Borrar', deleteRecord);
 
-    if (window.lucide) lucide.createIcons();
-}
+        if (window.lucide) lucide.createIcons();
+    }
 
     async function cancelActualForm() {
         const storageData = JSON.parse(localStorage.getItem('TABLE_DATA') || '{}');
@@ -1784,137 +1782,137 @@ function normalizeToolbar() {
         localStorage.removeItem('TABLE_DATA_REGISTRO'); 
     }
 
-function openDetailModal(row) {
-    // 1. Inicialización de estado
-    needsRefresh = false;
-    const configMapRaw = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
-    
-    const configMap = {};
-    Object.keys(configMapRaw).forEach(k => configMap[k.toUpperCase()] = configMapRaw[k]);
-
-    // 2. Normalización de la Barra de Herramientas
-    normalizeToolbar();
-    ['Cancelar'].forEach(disableButton);
-    
-    // 3. Ajuste estético para Modo Lectura
-    document.getElementById('btn-modal-save')?.classList.add('hidden');
-    document.getElementById('btn-modal-cancel')?.classList.add('hidden');
-    document.getElementById('footer-save-container')?.classList.add('hidden');
-
-    // 4. Preparación de contenedores y prefijos
-    const content = document.getElementById('detail-modal-content');
-    const title = document.getElementById('detail-modal-title');
-    const tablePrefix = currentTableName.split('_')[0].toUpperCase();
-  
-    // --- DETECCIÓN DE LÓGICA DE TRANSFERENCIA ---
-    const movTipo = String(row[tablePrefix + 'MOVIMIENTO'] || '').toUpperCase();
-    const valorRef = String(row[tablePrefix + 'REF'] || '').toUpperCase();
-    const isTransferRelated = movTipo === 'TRANSFERENCIA' || valorRef.includes('TRANSFERENCIA ');
-
-    // 5. Renderizado del Título Dinámico
-    content.innerHTML = '';
-    const rawStatus = row[tablePrefix + 'TYPEREG'] || "Registrado";
-    const isActuallyBlocked = String(rawStatus).toUpperCase() === "BLOQUEADO";
-    
-    const statusClass = isTransferRelated ? "opacity-30 cursor-not-allowed" : "cursor-pointer hover:bg-white/10 rounded-full transition-all";
-    const statusTitle = isTransferRelated ? "Las transferencias no pueden bloquearse" : "Cambiar Estatus";
-
-    title.innerHTML = `
-        <div class="grid grid-cols-[1fr_90px_20px] items-center w-full gap-2">
-            <div class="min-w-10 flex justify-start">
-                <span class="text-xl font-bold text-gray-500 tracking-tight mr-4">Doc: </span>
-                <span class="text-blue-400 text-2xl font-bold truncate">${row[tablePrefix + 'ID'] || 'Detalle'}</span>
-            </div>
-            <div class="flex justify-center min-w-0">
-                <span id="badge-status" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider border truncate ${
-                    isActuallyBlocked 
-                    ? 'bg-red-500/20 text-red-400 border-red-500/30' 
-                    : 'bg-green-500/20 text-green-400 border-green-500/30'
-                }">${rawStatus}</span>
-            </div>
-            <div id="status-icon-container" class="flex justify-end ${statusClass}" title="${statusTitle}">
-                <i data-lucide="${isActuallyBlocked ? 'lock' : 'check-circle'}" class="w-5 h-5 ${isActuallyBlocked ? 'text-red-400' : 'text-green-400'}"></i>
-            </div>
-        </div>`;
-
-    if (!isTransferRelated) {
-        const statusBtn = document.getElementById('status-icon-container');
-        if (statusBtn) statusBtn.onclick = () => toggleStatus(row);
-    }
-
-    // 6. Renderizado de Campos de Datos
-    Object.keys(row).forEach(key => {
-        const cleanKey = key.toUpperCase();
-        const idFieldName = tablePrefix + 'ID';
-        const refFieldName = tablePrefix + 'REF';
+    function openDetailModal(row) {
+        // 1. Inicialización de estado
+        needsRefresh = false;
+        const configMapRaw = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
         
-        // --- FILTROS DE EXCLUSIÓN ---
-        if (cleanKey.includes('TYPEREG') || cleanKey === idFieldName || cleanKey.includes('REGISTRO')) return;
-        if (cleanKey.endsWith('CUENTA2') && movTipo !== 'TRANSFERENCIA') return;
+        const configMap = {};
+        Object.keys(configMapRaw).forEach(k => configMap[k.toUpperCase()] = configMapRaw[k]);
 
-        const cfg = configMap[cleanKey] || {};
-        const visibility = String(cfg.visible || '').toLowerCase().trim();
-        const isForced = cleanKey.includes('REGISTRO') || cleanKey.includes('MOVIMIENTO');
-
-        if (visibility !== 'x' && visibility !== 'xx' && !isForced) return;
-
-        // --- DETECCIÓN DE TIPO DE CAMPO ---
-        const isNumeric = cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO') || cleanKey.includes('PRIMA') || cleanKey.includes('TASAREF');
-        const isDescription = cleanKey.includes('DESCRIPCION');
-        const isNormalCase = cleanKey.includes('CONFIG');
-        const isLockedRef = cleanKey === refFieldName && valorRef.includes('TRANSFERENCIA');
-
-        const item = document.createElement('div');
-        item.className = `grid grid-cols-[110px_1fr] px-2 py-1 border-b border-gray-800/50 last:border-0 hover:bg-white/5 justify-items-start ${isDescription ? 'items-start' : 'items-center'}`;
+        // 2. Normalización de la Barra de Herramientas
+        normalizeToolbar();
+        ['Cancelar'].forEach(disableButton);
         
-        let valueHTML = '';
+        // 3. Ajuste estético para Modo Lectura
+        document.getElementById('btn-modal-save')?.classList.add('hidden');
+        document.getElementById('btn-modal-cancel')?.classList.add('hidden');
+        document.getElementById('footer-save-container')?.classList.add('hidden');
 
-        if (isDescription) {
-            valueHTML = `
-                <textarea 
-                    readonly 
-                    tabindex="-1"
-                    class="bg-gray-500/10 border border-transparent rounded px-2 py-0 text-sm text-white font-bold w-full resize-none pointer-events-none select-none uppercase"
-                    style="height: 60px; text-align: left !important; display: block !important;"
-                >${row[key] || ''}</textarea>`;
-        } else if (isLockedRef) {
-            valueHTML = `
-                <div class="flex items-center h-[24px] px-2 py-0 w-full justify-between bg-orange-500/5 rounded border border-orange-500/10">
-                    <span class="text-sm font-bold uppercase tracking-tight text-orange-400/80 truncate">
-                        ${getFormattedValue(key, row[key])}
-                    </span>
-                    <i data-lucide="lock-keyhole" class="w-3.5 h-3.5 text-orange-500/50 ml-2"></i>
-                </div>`;
-        } else {
-            // --- MEJORA DE ALINEACIÓN PARA NÚMEROS ---
-            const textColor = isForced ? 'text-blue-400' : 'text-white';
-            const alignmentClass = isNumeric ? 'text-right pr-2' : 'text-left';
-            const alignmentStyle = isNumeric ? 'text-align: right !important;' : 'text-align: left !important;';
+        // 4. Preparación de contenedores y prefijos
+        const content = document.getElementById('detail-modal-content');
+        const title = document.getElementById('detail-modal-title');
+        const tablePrefix = currentTableName.split('_')[0].toUpperCase();
+    
+        // --- DETECCIÓN DE LÓGICA DE TRANSFERENCIA ---
+        const movTipo = String(row[tablePrefix + 'MOVIMIENTO'] || '').toUpperCase();
+        const valorRef = String(row[tablePrefix + 'REF'] || '').toUpperCase();
+        const isTransferRelated = movTipo === 'TRANSFERENCIA' || valorRef.includes('TRANSFERENCIA ');
 
-            valueHTML = `
-                <span class="${textColor} font-bold px-2 py-0 text-sm block w-full ${alignmentClass} ${isNormalCase ? 'normal-case' : 'uppercase'}" 
-                    style="${alignmentStyle}">
-                    ${getFormattedValue(key, row[key])}
-                </span>`;
+        // 5. Renderizado del Título Dinámico
+        content.innerHTML = '';
+        const rawStatus = row[tablePrefix + 'TYPEREG'] || "Registrado";
+        const isActuallyBlocked = String(rawStatus).toUpperCase() === "BLOQUEADO";
+        
+        const statusClass = isTransferRelated ? "opacity-30 cursor-not-allowed" : "cursor-pointer hover:bg-white/10 rounded-full transition-all";
+        const statusTitle = isTransferRelated ? "Las transferencias no pueden bloquearse" : "Cambiar Estatus";
+
+        title.innerHTML = `
+            <div class="grid grid-cols-[1fr_90px_20px] items-center w-full gap-2">
+                <div class="min-w-10 flex justify-start">
+                    <span class="text-xl font-bold text-gray-500 tracking-tight mr-4">Doc: </span>
+                    <span class="text-blue-400 text-2xl font-bold truncate">${row[tablePrefix + 'ID'] || 'Detalle'}</span>
+                </div>
+                <div class="flex justify-center min-w-0">
+                    <span id="badge-status" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider border truncate ${
+                        isActuallyBlocked 
+                        ? 'bg-red-500/20 text-red-400 border-red-500/30' 
+                        : 'bg-green-500/20 text-green-400 border-green-500/30'
+                    }">${rawStatus}</span>
+                </div>
+                <div id="status-icon-container" class="flex justify-end ${statusClass}" title="${statusTitle}">
+                    <i data-lucide="${isActuallyBlocked ? 'lock' : 'check-circle'}" class="w-5 h-5 ${isActuallyBlocked ? 'text-red-400' : 'text-green-400'}"></i>
+                </div>
+            </div>`;
+
+        if (!isTransferRelated) {
+            const statusBtn = document.getElementById('status-icon-container');
+            if (statusBtn) statusBtn.onclick = () => toggleStatus(row);
         }
-            
-        item.innerHTML = `
-            <span class="text-gray-200 font-medium uppercase text-[10px] text-left ${isDescription ? 'pt-0' : 'self-center'}" style="text-align: left !important;">
-                ${cfg.label || key}
-            </span>
-            ${valueHTML}`;
-            
-        content.appendChild(item);
-    });
 
-    // 7. Mostrar Modal y Refrescar Iconos
-    const modal = document.getElementById('detail-modal');
-    if (modal) modal.classList.remove('hidden');
-    
-    if (window.lucide) {
-        lucide.createIcons();
+        // 6. Renderizado de Campos de Datos
+        Object.keys(row).forEach(key => {
+            const cleanKey = key.toUpperCase();
+            const idFieldName = tablePrefix + 'ID';
+            const refFieldName = tablePrefix + 'REF';
+            
+            // --- FILTROS DE EXCLUSIÓN ---
+            if (cleanKey.includes('TYPEREG') || cleanKey === idFieldName || cleanKey.includes('REGISTRO')) return;
+            if (cleanKey.endsWith('CUENTA2') && movTipo !== 'TRANSFERENCIA') return;
+
+            const cfg = configMap[cleanKey] || {};
+            const visibility = String(cfg.visible || '').toLowerCase().trim();
+            const isForced = cleanKey.includes('REGISTRO') || cleanKey.includes('MOVIMIENTO');
+
+            if (visibility !== 'x' && visibility !== 'xx' && !isForced) return;
+
+            // --- DETECCIÓN DE TIPO DE CAMPO ---
+            const isNumeric = cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO') || cleanKey.includes('PRIMA') || cleanKey.includes('TASAREF');
+            const isDescription = cleanKey.includes('DESCRIPCION');
+            const isNormalCase = cleanKey.includes('CONFIG');
+            const isLockedRef = cleanKey === refFieldName && valorRef.includes('TRANSFERENCIA');
+
+            const item = document.createElement('div');
+            item.className = `grid grid-cols-[110px_1fr] px-2 py-1 border-b border-gray-800/50 last:border-0 hover:bg-white/5 justify-items-start ${isDescription ? 'items-start' : 'items-center'}`;
+            
+            let valueHTML = '';
+
+            if (isDescription) {
+                valueHTML = `
+                    <textarea 
+                        readonly 
+                        tabindex="-1"
+                        class="bg-gray-500/10 border border-transparent rounded px-2 py-0 text-sm text-white font-bold w-full resize-none pointer-events-none select-none uppercase"
+                        style="height: 60px; text-align: left !important; display: block !important;"
+                    >${row[key] || ''}</textarea>`;
+            } else if (isLockedRef) {
+                valueHTML = `
+                    <div class="flex items-center h-[24px] px-2 py-0 w-full justify-between bg-orange-500/5 rounded border border-orange-500/10">
+                        <span class="text-sm font-bold uppercase tracking-tight text-orange-400/80 truncate">
+                            ${getFormattedValue(key, row[key])}
+                        </span>
+                        <i data-lucide="lock-keyhole" class="w-3.5 h-3.5 text-orange-500/50 ml-2"></i>
+                    </div>`;
+            } else {
+                // --- MEJORA DE ALINEACIÓN PARA NÚMEROS ---
+                const textColor = isForced ? 'text-blue-400' : 'text-white';
+                const alignmentClass = isNumeric ? 'text-right pr-2' : 'text-left';
+                const alignmentStyle = isNumeric ? 'text-align: right !important;' : 'text-align: left !important;';
+
+                valueHTML = `
+                    <span class="${textColor} font-bold px-2 py-0 text-sm block w-full ${alignmentClass} ${isNormalCase ? 'normal-case' : 'uppercase'}" 
+                        style="${alignmentStyle}">
+                        ${getFormattedValue(key, row[key])}
+                    </span>`;
+            }
+                
+            item.innerHTML = `
+                <span class="text-gray-200 font-medium uppercase text-[10px] text-left ${isDescription ? 'pt-0' : 'self-center'}" style="text-align: left !important;">
+                    ${cfg.label || key}
+                </span>
+                ${valueHTML}`;
+                
+            content.appendChild(item);
+        });
+
+        // 7. Mostrar Modal y Refrescar Iconos
+        const modal = document.getElementById('detail-modal');
+        if (modal) modal.classList.remove('hidden');
+        
+        if (window.lucide) {
+            lucide.createIcons();
+        }
     }
-}
 
     function disableButton(title) {
         const btn = document.querySelector(`button[title="${title}"]`);
@@ -2213,213 +2211,213 @@ function openDetailModal(row) {
         renderColumnConfig(); 
     }
 
-async function saveRecord() {
-    toggleGlobalLoader(true, "Procesando Registro...", "Sincronizando valores en la base de datos GAS<br>Por favor, espere.");
+    async function saveRecord() {
+        toggleGlobalLoader(true, "Procesando Registro...", "Sincronizando valores en la base de datos GAS<br>Por favor, espere.");
 
-    const container = document.getElementById('detail-modal-content');
-    const inputs = container.querySelectorAll('[data-field]');
-    const configMapRaw = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
-    const configMap = {};
-    Object.keys(configMapRaw).forEach(k => configMap[k.toUpperCase()] = configMapRaw[k]);
+        const container = document.getElementById('detail-modal-content');
+        const inputs = container.querySelectorAll('[data-field]');
+        const configMapRaw = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
+        const configMap = {};
+        Object.keys(configMapRaw).forEach(k => configMap[k.toUpperCase()] = configMapRaw[k]);
 
-    let missingFields = [];
-    let payload = {};
+        let missingFields = [];
+        let payload = {};
 
-    // 1. LIMPIEZA DE ERRORES VISUALES
-    inputs.forEach(i => {
-        i.classList.remove('border-red-500', 'bg-red-500/10');
-        i.classList.add('border-transparent'); 
-    });
+        // 1. LIMPIEZA DE ERRORES VISUALES
+        inputs.forEach(i => {
+            i.classList.remove('border-red-500', 'bg-red-500/10');
+            i.classList.add('border-transparent'); 
+        });
 
-    // 2. EXTRACCIÓN Y FORMATEO DE DATOS
-    inputs.forEach(input => {
-        const key = input.dataset.field;
-        const cleanKey = key.toUpperCase();
-        const cfg = configMap[cleanKey] || {};
-        const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('PERIODO') || cleanKey.includes('EMISION') || cleanKey.includes('VIGENCIA');
-        
-        // Excluimos TASAREF y MONTOML2 para que no sean tratados como strings editables
-        const isNumeric = (cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO') || cleanKey.includes('PRIMA')) && 
-                          !cleanKey.endsWith('TASAREF') && !cleanKey.endsWith('MONTOML2');
-        
-        const isTextArea = input.tagName.toLowerCase() === 'textarea';
-        
-        let value;
-        if (input.hasAttribute('data-raw')) {
-            value = input.getAttribute('data-raw');
-        } else if (input.type === 'checkbox') {
-            value = input.checked;
-        } else {
-            value = input.value.trim();
-
-            if (cleanKey === 'TD101FACTURA') {
-                value = String(value);
-            }
-
-            // TRATAMIENTO PARA NÚMEROS EDITABLES (Lógica Inteligente)
-            if (isNumeric && value && cleanKey !== 'TD101FACTURA') {
-                let cleanNum = String(value);
-                if (cleanNum.includes(',') && cleanNum.includes('.')) {
-                    cleanNum = cleanNum.replace(/\./g, '').replace(',', '.');
-                } else if (cleanNum.includes(',')) {
-                    cleanNum = cleanNum.replace(',', '.');
-                }
-                cleanNum = cleanNum.replace(/[^-0-9.]/g, '');
-                let num = parseFloat(cleanNum);
-                value = !isNaN(num) ? num : 0;
-            } 
-            else if (!isTextArea && !isDate && typeof value === 'string') {
-                value = value.toUpperCase();
-            }
-        }
-
-        // --- FORMATEO ESTRICTO DE FECHA ---
-        if (isDate && value && typeof value === 'string') {
-            const isVigencia = cleanKey.includes('VIGENCIA');
-            let dateOnly = value.split('T')[0].split(' ')[0].trim();
+        // 2. EXTRACCIÓN Y FORMATEO DE DATOS
+        inputs.forEach(input => {
+            const key = input.dataset.field;
+            const cleanKey = key.toUpperCase();
+            const cfg = configMap[cleanKey] || {};
+            const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('PERIODO') || cleanKey.includes('EMISION') || cleanKey.includes('VIGENCIA');
             
-            if (dateOnly.includes('-')) {
-                const parts = dateOnly.split('-');
-                if (parts.length === 3 && parts[0].length === 4) {
-                    value = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                }
+            // Excluimos TASAREF y MONTOML2 para que no sean tratados como strings editables
+            const isNumeric = (cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO') || cleanKey.includes('PRIMA')) && 
+                            !cleanKey.endsWith('TASAREF') && !cleanKey.endsWith('MONTOML2');
+            
+            const isTextArea = input.tagName.toLowerCase() === 'textarea';
+            
+            let value;
+            if (input.hasAttribute('data-raw')) {
+                value = input.getAttribute('data-raw');
+            } else if (input.type === 'checkbox') {
+                value = input.checked;
             } else {
-                value = dateOnly;
+                value = input.value.trim();
+
+                if (cleanKey === 'TD101FACTURA') {
+                    value = String(value);
+                }
+
+                // TRATAMIENTO PARA NÚMEROS EDITABLES (Lógica Inteligente)
+                if (isNumeric && value && cleanKey !== 'TD101FACTURA') {
+                    let cleanNum = String(value);
+                    if (cleanNum.includes(',') && cleanNum.includes('.')) {
+                        cleanNum = cleanNum.replace(/\./g, '').replace(',', '.');
+                    } else if (cleanNum.includes(',')) {
+                        cleanNum = cleanNum.replace(',', '.');
+                    }
+                    cleanNum = cleanNum.replace(/[^-0-9.]/g, '');
+                    let num = parseFloat(cleanNum);
+                    value = !isNaN(num) ? num : 0;
+                } 
+                else if (!isTextArea && !isDate && typeof value === 'string') {
+                    value = value.toUpperCase();
+                }
             }
 
-            if (isVigencia && value) {
-                value = `${value} 00:00:00`;
+            // --- FORMATEO ESTRICTO DE FECHA ---
+            if (isDate && value && typeof value === 'string') {
+                const isVigencia = cleanKey.includes('VIGENCIA');
+                let dateOnly = value.split('T')[0].split(' ')[0].trim();
+                
+                if (dateOnly.includes('-')) {
+                    const parts = dateOnly.split('-');
+                    if (parts.length === 3 && parts[0].length === 4) {
+                        value = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    }
+                } else {
+                    value = dateOnly;
+                }
+
+                if (isVigencia && value) {
+                    value = `${value} 00:00:00`;
+                }
             }
-        }
 
-        const isActuallyEmpty = (value === '' || value === null || value === undefined);
+            const isActuallyEmpty = (value === '' || value === null || value === undefined);
 
-        if (cfg.Es_Obligatorio === true && isActuallyEmpty) {
-            missingFields.push(cfg.label || key);
-            input.classList.add('border-red-500', 'bg-red-500/10');
-        }
+            if (cfg.Es_Obligatorio === true && isActuallyEmpty) {
+                missingFields.push(cfg.label || key);
+                input.classList.add('border-red-500', 'bg-red-500/10');
+            }
 
-        if (isNumeric && isActuallyEmpty) {
-            payload[key] = 0;
-        } else {
-            payload[key] = value;
-        }
-    });
+            if (isNumeric && isActuallyEmpty) {
+                payload[key] = 0;
+            } else {
+                payload[key] = value;
+            }
+        });
 
-    // --- 3. LÓGICA DE CAMPOS CALCULADOS (TASAREF 5 dec / MONTOML2 2 dec) ---
-    const montoPagado = parseFloat(payload['TD101MONTOPAGADO']) || 0;
-    const montoPrima = parseFloat(payload['TD101MONTOPRIMA']) || 0;
-    const montoTotal = parseFloat(payload['TD101MONTOTOTAL']) || 0;
+        // --- 3. LÓGICA DE CAMPOS CALCULADOS (TASAREF 5 dec / MONTOML2 2 dec) ---
+        const montoPagado = parseFloat(payload['TD101MONTOPAGADO']) || 0;
+        const montoPrima = parseFloat(payload['TD101MONTOPRIMA']) || 0;
+        const montoTotal = parseFloat(payload['TD101MONTOTOTAL']) || 0;
 
-    // Cálculo Tasa: Redondeo a 5 decimales
-    let tasaCalculada = montoPrima !== 0 ? (montoPagado / montoPrima) : 0;
-    payload['TD101TASAREF'] = Math.round(tasaCalculada * 100000) / 100000;
+        // Cálculo Tasa: Redondeo a 5 decimales
+        let tasaCalculada = montoPrima !== 0 ? (montoPagado / montoPrima) : 0;
+        payload['TD101TASAREF'] = Math.round(tasaCalculada * 100000) / 100000;
 
-    // Cálculo Monto ML2: Redondeo a 2 decimales
-    let ml2Calculado = payload['TD101TASAREF'] * montoTotal;
-    payload['TD101MONTOML2'] = Math.round(ml2Calculado * 100) / 100;
+        // Cálculo Monto ML2: Redondeo a 2 decimales
+        let ml2Calculado = payload['TD101TASAREF'] * montoTotal;
+        payload['TD101MONTOML2'] = Math.round(ml2Calculado * 100) / 100;
 
-    // --- 4. VALIDACIONES DE NEGOCIO ---
-    const tablePrefix = currentTableName.split('_')[0].toUpperCase();
-    const keyImporte = `${tablePrefix}IMPORTE`;
+        // --- 4. VALIDACIONES DE NEGOCIO ---
+        const tablePrefix = currentTableName.split('_')[0].toUpperCase();
+        const keyImporte = `${tablePrefix}IMPORTE`;
 
-    if (missingFields.length > 0) {
-        toggleGlobalLoader(false);
-        const listaHtml = missingFields.map(field => `• ${field}`).join('<br>');
-        await showSystemModal({ title: 'Campos Obligatorios', text: `Complete:<br><br>${listaHtml}`, type: 'warning' });
-        return; 
-    }
-
-    if (Object.prototype.hasOwnProperty.call(payload, keyImporte)) {
-        const valorImporte = parseFloat(payload[keyImporte]);
-        if (isNaN(valorImporte) || valorImporte === 0) {
+        if (missingFields.length > 0) {
             toggleGlobalLoader(false);
-            const inputImporte = container.querySelector(`[data-field="${keyImporte}"]`);
-            if (inputImporte) inputImporte.classList.add('border-red-500', 'bg-red-500/10');
-            await showSystemModal({ title: 'Importe Inválido', text: 'El campo <b>Importe</b> debe ser diferente a <b>0,00</b>.', type: 'warning' });
-            return;
+            const listaHtml = missingFields.map(field => `• ${field}`).join('<br>');
+            await showSystemModal({ title: 'Campos Obligatorios', text: `Complete:<br><br>${listaHtml}`, type: 'warning' });
+            return; 
         }
-    }
 
-    // C. Traducción de Cuentas y Validación de Monedas
-    const badgeMode = document.getElementById('title-badge-mode')?.innerText.toUpperCase() || '';
-    const matrizCuentas = JSON.parse(localStorage.getItem('MATRIZ_CUENTAS_USUARIO') || "[]");
-    const monedaTransaccion = String(payload[`${tablePrefix}MONEDA`] || "").trim().toUpperCase();
-
-    const aliasEmisora = payload[`${tablePrefix}ALIASCUENTA`];
-    let infoEmisora = null;
-
-    if (aliasEmisora && matrizCuentas.length > 0) {
-        infoEmisora = matrizCuentas.find(c => String(c.TD102ALIAS || c.ALIAS).trim() === String(aliasEmisora).trim());
-        if (infoEmisora) {
-            const monedaE = infoEmisora.TD102MONEDA;
-            if (monedaTransaccion && monedaE && monedaTransaccion !== monedaE) {
+        if (Object.prototype.hasOwnProperty.call(payload, keyImporte)) {
+            const valorImporte = parseFloat(payload[keyImporte]);
+            if (isNaN(valorImporte) || valorImporte === 0) {
                 toggleGlobalLoader(false);
-                container.querySelector(`[data-field$="ALIASCUENTA"]`)?.classList.add('border-red-500', 'bg-red-500/10');
-                await showSystemModal({ title: 'Inconsistencia de Moneda', text: `La moneda (<b>${monedaTransaccion}</b>) no coincide con la cuenta (<b>${monedaE}</b>).`, type: 'error' });
-                return;
-            }
-            payload[`${tablePrefix}CUENTA`] = infoEmisora.TD102ID || infoEmisora.ID;
-        }
-    }
-
-    if (badgeMode.includes('TR')) {
-        const aliasReceptora = payload[`${tablePrefix}CUENTA2`];
-        let infoReceptora = null;
-        if (aliasReceptora && matrizCuentas.length > 0) {
-            infoReceptora = matrizCuentas.find(c => String(c.TD102ALIAS || c.ALIAS).trim() === String(aliasReceptora).trim());
-            if (infoReceptora) {
-                payload[`${tablePrefix}CUENTA2`] = infoReceptora.TD102ID || infoReceptora.ID;
-                payload[`${tablePrefix}ALIASCUENTA2`] = aliasReceptora;
-            }
-        }
-        if (infoEmisora && infoReceptora) {
-            if ((infoEmisora.TD102ID || infoEmisora.ID) === (infoReceptora.TD102ID || infoReceptora.ID)) {
-                toggleGlobalLoader(false);
-                await showSystemModal({ title: 'Error', text: 'Cuentas origen y destino iguales.', type: 'error' });
+                const inputImporte = container.querySelector(`[data-field="${keyImporte}"]`);
+                if (inputImporte) inputImporte.classList.add('border-red-500', 'bg-red-500/10');
+                await showSystemModal({ title: 'Importe Inválido', text: 'El campo <b>Importe</b> debe ser diferente a <b>0,00</b>.', type: 'warning' });
                 return;
             }
         }
+
+        // C. Traducción de Cuentas y Validación de Monedas
+        const badgeMode = document.getElementById('title-badge-mode')?.innerText.toUpperCase() || '';
+        const matrizCuentas = JSON.parse(localStorage.getItem('MATRIZ_CUENTAS_USUARIO') || "[]");
+        const monedaTransaccion = String(payload[`${tablePrefix}MONEDA`] || "").trim().toUpperCase();
+
+        const aliasEmisora = payload[`${tablePrefix}ALIASCUENTA`];
+        let infoEmisora = null;
+
+        if (aliasEmisora && matrizCuentas.length > 0) {
+            infoEmisora = matrizCuentas.find(c => String(c.TD102ALIAS || c.ALIAS).trim() === String(aliasEmisora).trim());
+            if (infoEmisora) {
+                const monedaE = infoEmisora.TD102MONEDA;
+                if (monedaTransaccion && monedaE && monedaTransaccion !== monedaE) {
+                    toggleGlobalLoader(false);
+                    container.querySelector(`[data-field$="ALIASCUENTA"]`)?.classList.add('border-red-500', 'bg-red-500/10');
+                    await showSystemModal({ title: 'Inconsistencia de Moneda', text: `La moneda (<b>${monedaTransaccion}</b>) no coincide con la cuenta (<b>${monedaE}</b>).`, type: 'error' });
+                    return;
+                }
+                payload[`${tablePrefix}CUENTA`] = infoEmisora.TD102ID || infoEmisora.ID;
+            }
+        }
+
+        if (badgeMode.includes('TR')) {
+            const aliasReceptora = payload[`${tablePrefix}CUENTA2`];
+            let infoReceptora = null;
+            if (aliasReceptora && matrizCuentas.length > 0) {
+                infoReceptora = matrizCuentas.find(c => String(c.TD102ALIAS || c.ALIAS).trim() === String(aliasReceptora).trim());
+                if (infoReceptora) {
+                    payload[`${tablePrefix}CUENTA2`] = infoReceptora.TD102ID || infoReceptora.ID;
+                    payload[`${tablePrefix}ALIASCUENTA2`] = aliasReceptora;
+                }
+            }
+            if (infoEmisora && infoReceptora) {
+                if ((infoEmisora.TD102ID || infoEmisora.ID) === (infoReceptora.TD102ID || infoReceptora.ID)) {
+                    toggleGlobalLoader(false);
+                    await showSystemModal({ title: 'Error', text: 'Cuentas origen y destino iguales.', type: 'error' });
+                    return;
+                }
+            }
+        }
+
+        // 5. ENVÍO
+        const isNewOrDuplicate = badgeMode.includes('BORRADOR') || badgeMode.includes('DUPLICADO');
+        const gasAction = isNewOrDuplicate ? 'registerDynamicDataTD' : 'editDynamicDataTD';
+        const userId = localStorage.getItem('Usuario_ID') || ""; 
+
+        if (isNewOrDuplicate) {
+            delete payload[`${tablePrefix}ID`];
+            payload[`${tablePrefix}TYPEREG`] = "REGISTRADO";
+            payload[`${tablePrefix}IDOWNER`] = userId;      
+        }
+
+        const finalPayload = {
+            ...payload,
+            action: gasAction,
+            tiendaId: localStorage.getItem(KEYS.TIENDA_ID), 
+            TABLA_DESTINO: currentTableName,
+            currentUser: userId
+        };
+
+        const createdRecord = await executeSubmit(finalPayload); 
+
+        if (createdRecord) {
+            const loaderLabel = document.querySelector('#global-loader span');
+            if (loaderLabel) loaderLabel.innerHTML = "Sincronizando registros...<br>Actualizando vista de tabla.";
+
+            needsRefresh = true; 
+            await fetchData(currentTableName); 
+
+            document.getElementById('detail-modal')?.classList.add('hidden');
+            toggleGlobalLoader(false);
+            
+            await showSystemModal({ title: 'Proceso Completado', text: 'Solicitud ejecutada correctamente.', type: 'info' });
+            if (createdRecord) openDetailModal(createdRecord);
+        } else {
+            toggleGlobalLoader(false);
+            showSystemModal({ title: 'Error', text: 'No se pudo guardar el registro.', type: 'error' });
+        }
     }
-
-    // 5. ENVÍO
-    const isNewOrDuplicate = badgeMode.includes('BORRADOR') || badgeMode.includes('DUPLICADO');
-    const gasAction = isNewOrDuplicate ? 'registerDynamicDataTD' : 'editDynamicDataTD';
-    const userId = localStorage.getItem('Usuario_ID') || ""; 
-
-    if (isNewOrDuplicate) {
-        delete payload[`${tablePrefix}ID`];
-        payload[`${tablePrefix}TYPEREG`] = "REGISTRADO";
-        payload[`${tablePrefix}IDOWNER`] = userId;      
-    }
-
-    const finalPayload = {
-        ...payload,
-        action: gasAction,
-        tiendaId: localStorage.getItem(KEYS.TIENDA_ID), 
-        TABLA_DESTINO: currentTableName,
-        currentUser: userId
-    };
-
-    const createdRecord = await executeSubmit(finalPayload); 
-
-    if (createdRecord) {
-        const loaderLabel = document.querySelector('#global-loader span');
-        if (loaderLabel) loaderLabel.innerHTML = "Sincronizando registros...<br>Actualizando vista de tabla.";
-
-        needsRefresh = true; 
-        await fetchData(currentTableName); 
-
-        document.getElementById('detail-modal')?.classList.add('hidden');
-        toggleGlobalLoader(false);
-        
-        await showSystemModal({ title: 'Proceso Completado', text: 'Solicitud ejecutada correctamente.', type: 'info' });
-        if (createdRecord) openDetailModal(createdRecord);
-    } else {
-        toggleGlobalLoader(false);
-        showSystemModal({ title: 'Error', text: 'No se pudo guardar el registro.', type: 'error' });
-    }
-}
 
     async function saveCurrentConfig() {
         if (!currentTableName) return;
@@ -2666,134 +2664,134 @@ async function saveRecord() {
             </div>`;
 
         Object.keys(row).forEach(key => {
-                const cleanKey = key.toUpperCase();
-                if (cleanKey.includes('REGISTRO') || cleanKey === idFieldName) return;
-                if (cleanKey.endsWith('CUENTA2') && !isTransferRelated) return;
-                if (cleanKey.includes('TYPEREG') && isTransferRelated) return;
-                
-                const cfg = configMap[cleanKey] || {};
-                const visValue = String(cfg.visible || '').toLowerCase().trim();
-                if (visValue === "") return;
+            const cleanKey = key.toUpperCase();
+            if (cleanKey.includes('REGISTRO') || cleanKey === idFieldName) return;
+            if (cleanKey.endsWith('CUENTA2') && !isTransferRelated) return;
+            if (cleanKey.includes('TYPEREG') && isTransferRelated) return;
+            
+            const cfg = configMap[cleanKey] || {};
+            const visValue = String(cfg.visible || '').toLowerCase().trim();
+            if (visValue === "") return;
 
-                const isDescription = cleanKey.includes('DESCRIPCION');
-                let isEditable = (visValue === 'x' && cfg.editable !== false && cfg.Es_Calculado !== true);
-                
-                if (isTransferRelated && !isDescription) isEditable = false;
-                const isLockedTransferRef = cleanKey === refFieldName && valorRefActual.includes('TRANSFERENCIA');
-                if (isLockedTransferRef) isEditable = false;
+            const isDescription = cleanKey.includes('DESCRIPCION');
+            let isEditable = (visValue === 'x' && cfg.editable !== false && cfg.Es_Calculado !== true);
+            
+            if (isTransferRelated && !isDescription) isEditable = false;
+            const isLockedTransferRef = cleanKey === refFieldName && valorRefActual.includes('TRANSFERENCIA');
+            if (isLockedTransferRef) isEditable = false;
 
-                const isRequired = cfg.Es_Obligatorio === true || String(cfg.Es_Obligatorio).toLowerCase() === "true";
-                const asterisco = isRequired ? '<span class="text-red-500 ml-1 font-bold">*</span>' : '';
-                const istoggle = cleanKey.includes('TYPEREG');
-                const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('VIGENCIA') || cleanKey.includes('PERIODO');
-                const isNumeric = cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO');
-                
-                const dictKey = `${currentTableName}|${key}`.toUpperCase();
-                const dictOptions = dictionary[dictKey];
-                const isSelect = isEditable && dictOptions && dictOptions.length > 0 && (
-                    cleanKey.includes('MONEDA') || cleanKey.includes('MOVIMIENTO') || cleanKey.includes('EMPRESA') || cleanKey.includes('TIPO') || cleanKey.endsWith('ALIASCUENTA')
-                );       
-                const isIdCuenta = cleanKey === `${tablePrefix}CUENTA`;
+            const isRequired = cfg.Es_Obligatorio === true || String(cfg.Es_Obligatorio).toLowerCase() === "true";
+            const asterisco = isRequired ? '<span class="text-red-500 ml-1 font-bold">*</span>' : '';
+            const istoggle = cleanKey.includes('TYPEREG');
+            const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('VIGENCIA') || cleanKey.includes('PERIODO');
+            const isNumeric = cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO');
+            
+            const dictKey = `${currentTableName}|${key}`.toUpperCase();
+            const dictOptions = dictionary[dictKey];
+            const isSelect = isEditable && dictOptions && dictOptions.length > 0 && (
+                cleanKey.includes('MONEDA') || cleanKey.includes('MOVIMIENTO') || cleanKey.includes('EMPRESA') || cleanKey.includes('TIPO') || cleanKey.endsWith('ALIASCUENTA')
+            );       
+            const isIdCuenta = cleanKey === `${tablePrefix}CUENTA`;
 
-                const item = document.createElement('div');
-                item.className = 'grid grid-cols-[110px_1fr] px-2 py-1 border-b border-gray-800/50 last:border-0 hover:bg-white/5 justify-items-start';
-                
-                let valueElement = '';
-                const val = row[key] || '';
+            const item = document.createElement('div');
+            item.className = 'grid grid-cols-[110px_1fr] px-2 py-1 border-b border-gray-800/50 last:border-0 hover:bg-white/5 justify-items-start';
+            
+            let valueElement = '';
+            const val = row[key] || '';
 
-                if (!isEditable) {
-                    const rawValue = row[key] !== null ? row[key] : '';
-                    const isSpecialLock = isLockedTransferRef || (isTransferRelated && !isDescription);
-                    const isAliasField = cleanKey.endsWith('ALIAS'); // Identificador para el span visual
+            if (!isEditable) {
+                const rawValue = row[key] !== null ? row[key] : '';
+                const isSpecialLock = isLockedTransferRef || (isTransferRelated && !isDescription);
+                const isAliasField = cleanKey.endsWith('ALIAS'); // Identificador para el span visual
+                
+                valueElement = `
+                    <div class="flex items-center h-[24px] px-2 py-0 w-full justify-between ${isSpecialLock ? 'bg-orange-500/5 rounded opacity-60' : 'opacity-50'}">
+                        <span class="text-sm font-bold uppercase tracking-tight ${isAliasField ? 'visual-alias-span' : ''} ${isSpecialLock ? 'text-orange-400/80' : 'text-gray-500'}">
+                            ${getFormattedValue(key, rawValue)}
+                        </span>
+                        <input type="hidden" data-field="${key}" value="${rawValue}">
+                        <i data-lucide="${isSpecialLock ? 'lock-keyhole' : (cfg.Es_Calculado ? 'calculator' : 'lock')}" 
+                        class="w-3.5 h-3.5 ${isSpecialLock ? 'text-orange-500/50' : 'text-gray-700'}"></i>
+                    </div>`;
+            } 
+            else if (istoggle) {
+                const isBlocked = String(row[key]).toUpperCase() === 'BLOQUEADO';
+                const toggleDisabled = isTransferRelated ? 'pointer-events-none opacity-30' : '';
+                valueElement = `
+                    <div class="flex items-center gap-3 ${toggleDisabled}">
+                        <button type="button" ${isTransferRelated ? '' : `onclick="toggleStatus(this, '${key}')"`} class="focus:outline-none transition-transform active:scale-90" id="btn-toggle-${key}">
+                            <i data-lucide="${isBlocked ? 'toggle-left' : 'toggle-right'}" class="w-6 h-6 ${isBlocked ? 'text-red-500' : 'text-green-500'} pointer-events-none"></i>
+                        </button>
+                        <span id="label-${key}" class="text-[11px] font-bold uppercase ${isBlocked ? 'text-red-500' : 'text-green-500'}">${isBlocked ? 'Bloqueado' : 'Registrado'}</span>
+                        <input type="hidden" data-field="${key}" id="input-${key}" value="${row[key]}">
+                    </div>`;
+            } 
+            else if (isIdCuenta) {
+                valueElement = `<input type="hidden" data-field="${key}" value="${val}">`;
+                item.className = 'hidden'; 
+            } 
+            else if (isSelect) {
+                const valActual = String(val || '').trim();
+                const existeEnOpciones = dictOptions.some(opt => String(opt).trim() === valActual);
+                const optionsHtml = dictOptions.map(opt => `<option value="${opt}" ${String(opt).trim() === valActual ? 'selected' : ''} style="background-color: var(--bg); color: var(--txt);">${opt}</option>`).join('');
+
+                valueElement = `
+                    <div class="relative w-full group">
+                        <select data-field="${key}" onchange="updateTD102Alias()"
+                            style="background-color: var(--bg); border-color: var(--th); color: var(--p-soft);"
+                            class="border rounded px-2 py-0 text-sm font-bold w-full focus:outline-none transition-all appearance-none cursor-pointer pr-8 hover:brightness-110 shadow-sm">
+                            ${!existeEnOpciones ? `<option value="${valActual}" selected style="background-color: var(--bg); color: var(--txt);">${valActual || '-- SELECCIONE --'}</option>` : ''}
+                            ${optionsHtml}
+                        </select>
+                        <div class="absolute inset-y-0 right-2 flex items-center pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
+                            <i data-lucide="search" class="w-3.5 h-3.5" style="color: var(--p-soft);"></i>
+                        </div>
+                    </div>`;
+            }
+            else if (isDate) {
+                let dateISO = val ? (val.includes('/') ? val.split('/').reverse().join('-') : val.split('T')[0]) : '';
+                valueElement = `<input type="date" data-field="${key}" value="${dateISO}" class="custom-date-input bg-gray-800/50 border border-transparent focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none uppercase transition-colors">`;
+            } 
+            else if (isNumeric) {
+                valueElement = `<input type="text" data-field="${key}" data-raw="${val}" value="" placeholder="${getFormattedValue(key, val)}" onfocus="setupNumericAccounting(this)" onblur="restoreNumericFormat(this, '${key}')" oninput="applyAccountingMask(this)" class="bg-gray-800/50 border border-transparent focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full text-right focus:outline-none transition-colors placeholder:text-blue-400/60">`;
+            } 
+            else {
+                // 1. Identificamos si es el campo de descripción
+                const isDescriptionField = cleanKey.includes('DESCRIPCION');
+                
+                // 2. Tu configuración: Borde Rojo + Fondo Azul si es Transferencia/Descripción
+                const specialStyle = (isTransferRelated && isDescriptionField) 
+                    ? 'border rounded border-red-500/50 bg-blue-500/10' 
+                    : 'bg-gray-800/30 border border-transparent';
+
+                if (isDescriptionField) {
+                    // 3. Placeholder solo si el valor está vacío
+                    const placeholderAttr = !val ? 'placeholder="Escriba una nota o referencia aquí..."' : '';
                     
                     valueElement = `
-                        <div class="flex items-center h-[24px] px-2 py-0 w-full justify-between ${isSpecialLock ? 'bg-orange-500/5 rounded opacity-60' : 'opacity-50'}">
-                            <span class="text-sm font-bold uppercase tracking-tight ${isAliasField ? 'visual-alias-span' : ''} ${isSpecialLock ? 'text-orange-400/80' : 'text-gray-500'}">
-                                ${getFormattedValue(key, rawValue)}
-                            </span>
-                            <input type="hidden" data-field="${key}" value="${rawValue}">
-                            <i data-lucide="${isSpecialLock ? 'lock-keyhole' : (cfg.Es_Calculado ? 'calculator' : 'lock')}" 
-                            class="w-3.5 h-3.5 ${isSpecialLock ? 'text-orange-500/50' : 'text-gray-700'}"></i>
-                        </div>`;
-                } 
-                else if (istoggle) {
-                    const isBlocked = String(row[key]).toUpperCase() === 'BLOQUEADO';
-                    const toggleDisabled = isTransferRelated ? 'pointer-events-none opacity-30' : '';
-                    valueElement = `
-                        <div class="flex items-center gap-3 ${toggleDisabled}">
-                            <button type="button" ${isTransferRelated ? '' : `onclick="toggleStatus(this, '${key}')"`} class="focus:outline-none transition-transform active:scale-90" id="btn-toggle-${key}">
-                                <i data-lucide="${isBlocked ? 'toggle-left' : 'toggle-right'}" class="w-6 h-6 ${isBlocked ? 'text-red-500' : 'text-green-500'} pointer-events-none"></i>
-                            </button>
-                            <span id="label-${key}" class="text-[11px] font-bold uppercase ${isBlocked ? 'text-red-500' : 'text-green-500'}">${isBlocked ? 'Bloqueado' : 'Registrado'}</span>
-                            <input type="hidden" data-field="${key}" id="input-${key}" value="${row[key]}">
-                        </div>`;
-                } 
-                else if (isIdCuenta) {
-                    valueElement = `<input type="hidden" data-field="${key}" value="${val}">`;
-                    item.className = 'hidden'; 
-                } 
-                else if (isSelect) {
-                    const valActual = String(val || '').trim();
-                    const existeEnOpciones = dictOptions.some(opt => String(opt).trim() === valActual);
-                    const optionsHtml = dictOptions.map(opt => `<option value="${opt}" ${String(opt).trim() === valActual ? 'selected' : ''} style="background-color: var(--bg); color: var(--txt);">${opt}</option>`).join('');
+                        <textarea data-field="${key}" rows="2" ${placeholderAttr}
+                            class="${specialStyle} focus:border-red-500 rounded px-2 py-1 text-sm text-gray-100 font-bold w-full focus:outline-none transition-all resize-none placeholder:text-gray-500 placeholder:italic placeholder:font-normal uppercase">${val}</textarea>`;
+                } else {
+                    // 4. Lógica estándar para otros campos (como NUMERO)
+                    const isNumeroCard = cleanKey.endsWith('NUMERO');
+                    const onInputEvent = isNumeroCard ? 'applyCardMask(this)' : 'updateTD102Alias()';
+                    const maxLengthAttr = isNumeroCard ? 'maxlength="19"' : '';
 
                     valueElement = `
-                        <div class="relative w-full group">
-                            <select data-field="${key}" onchange="updateTD102Alias()"
-                                style="background-color: var(--bg); border-color: var(--th); color: var(--p-soft);"
-                                class="border rounded px-2 py-0 text-sm font-bold w-full focus:outline-none transition-all appearance-none cursor-pointer pr-8 hover:brightness-110 shadow-sm">
-                                ${!existeEnOpciones ? `<option value="${valActual}" selected style="background-color: var(--bg); color: var(--txt);">${valActual || '-- SELECCIONE --'}</option>` : ''}
-                                ${optionsHtml}
-                            </select>
-                            <div class="absolute inset-y-0 right-2 flex items-center pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
-                                <i data-lucide="search" class="w-3.5 h-3.5" style="color: var(--p-soft);"></i>
-                            </div>
-                        </div>`;
+                        <input type="text" data-field="${key}" value="${val}" 
+                            oninput="${onInputEvent}" ${maxLengthAttr} 
+                            class="${specialStyle} focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none uppercase transition-colors">`;
                 }
-                else if (isDate) {
-                    let dateISO = val ? (val.includes('/') ? val.split('/').reverse().join('-') : val.split('T')[0]) : '';
-                    valueElement = `<input type="date" data-field="${key}" value="${dateISO}" class="custom-date-input bg-gray-800/50 border border-transparent focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none uppercase transition-colors">`;
-                } 
-                else if (isNumeric) {
-                    valueElement = `<input type="text" data-field="${key}" data-raw="${val}" value="" placeholder="${getFormattedValue(key, val)}" onfocus="setupNumericAccounting(this)" onblur="restoreNumericFormat(this, '${key}')" oninput="applyAccountingMask(this)" class="bg-gray-800/50 border border-transparent focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full text-right focus:outline-none transition-colors placeholder:text-blue-400/60">`;
-                } 
-                else {
-                    // 1. Identificamos si es el campo de descripción
-                    const isDescriptionField = cleanKey.includes('DESCRIPCION');
-                    
-                    // 2. Tu configuración: Borde Rojo + Fondo Azul si es Transferencia/Descripción
-                    const specialStyle = (isTransferRelated && isDescriptionField) 
-                        ? 'border rounded border-red-500/50 bg-blue-500/10' 
-                        : 'bg-gray-800/30 border border-transparent';
+            }
 
-                    if (isDescriptionField) {
-                        // 3. Placeholder solo si el valor está vacío
-                        const placeholderAttr = !val ? 'placeholder="Escriba una nota o referencia aquí..."' : '';
-                        
-                        valueElement = `
-                            <textarea data-field="${key}" rows="2" ${placeholderAttr}
-                                class="${specialStyle} focus:border-red-500 rounded px-2 py-1 text-sm text-gray-100 font-bold w-full focus:outline-none transition-all resize-none placeholder:text-gray-500 placeholder:italic placeholder:font-normal uppercase">${val}</textarea>`;
-                    } else {
-                        // 4. Lógica estándar para otros campos (como NUMERO)
-                        const isNumeroCard = cleanKey.endsWith('NUMERO');
-                        const onInputEvent = isNumeroCard ? 'applyCardMask(this)' : 'updateTD102Alias()';
-                        const maxLengthAttr = isNumeroCard ? 'maxlength="19"' : '';
+            // Renderizado final del item
+            item.innerHTML = `<span class="text-gray-200 font-medium uppercase text-[10px] self-start flex items-center">${cfg.label || key}${asterisco}</span>${valueElement}`;
+            content.appendChild(item);
+        });
 
-                        valueElement = `
-                            <input type="text" data-field="${key}" value="${val}" 
-                                oninput="${onInputEvent}" ${maxLengthAttr} 
-                                class="${specialStyle} focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none uppercase transition-colors">`;
-                    }
-                }
-
-                // Renderizado final del item
-                item.innerHTML = `<span class="text-gray-200 font-medium uppercase text-[10px] self-start flex items-center">${cfg.label || key}${asterisco}</span>${valueElement}`;
-                content.appendChild(item);
-            });
-
-            // Aplicar formato inicial al número si existe
-            const numInput = content.querySelector(`[data-field$="NUMERO"]`);
-            if (numInput && typeof applyCardMask === 'function') applyCardMask(numInput);
+        // Aplicar formato inicial al número si existe
+        const numInput = content.querySelector(`[data-field$="NUMERO"]`);
+        if (numInput && typeof applyCardMask === 'function') applyCardMask(numInput);
 
         if (window.lucide) lucide.createIcons();
     }
@@ -2858,111 +2856,111 @@ async function saveRecord() {
 
         // 4. RENDERIZADO DINÁMICO DE CAMPOS
         Object.keys(configMap).forEach(key => {
-                const cfg = configMap[key]; 
-                const cleanKey = key.toUpperCase();
+            const cfg = configMap[key]; 
+            const cleanKey = key.toUpperCase();
+            
+            // --- REGLA DE VISIBILIDAD ---
+            const visValue = String(cfg.visible || '').toLowerCase().trim();
+            if (visValue === "") return;
+
+            // --- MANEJO DE INPUTS OCULTOS REQUERIDOS POR SAVERECORD ---
+            if (cleanKey === idPrincipalName || cleanKey === idCuentaName) {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.dataset.field = key; 
+                hiddenInput.value = ''; 
+                content.appendChild(hiddenInput);
+                return; 
+            }
+
+            // --- REGLAS DE EXCLUSIÓN VISUAL RESTANTES ---
+            if (cleanKey.endsWith('CUENTA2') || cleanKey.endsWith('IDOWNER') || cleanKey.includes('REGISTRO') || cleanKey.includes('TYPEREG')) return;
+
+            const isCalculated = cfg.Es_Calculado === true || String(cfg.Es_Calculado).toLowerCase() === "calc";
+            const isEditable = visValue === 'x' && cfg.editable !== false && !isCalculated;
+
+            const isRequired = cfg.Es_Obligatorio === true || String(cfg.Es_Obligatorio).toLowerCase() === "true";
+            const asterisco = isRequired ? '<span class="text-red-500 ml-1 font-bold">*</span>' : '';
+
+            // --- LÓGICA DE SELECT (DICCIONARIO + ALIASCUENTA) ---
+            const currentTableClean = String(currentTableName).trim().toUpperCase();
+            const dictKey = `${currentTableClean}|${cleanKey}`;
+            let dictOptions = dictionary[dictKey] || [];
+            
+            const isAliasField = cleanKey.endsWith('ALIASCUENTA');
+            
+            if (isAliasField && dictOptions.length === 0) {
+                dictOptions = (window.dashboardState?.cuentas || []).map(c => c.ALIAS);
+            }
+
+            const isSelect = isEditable && dictOptions && dictOptions.length > 0 && (
+                cleanKey.includes('MONEDA') || cleanKey.includes('MOVIMIENTO') || cleanKey.includes('TIPO') || isAliasField
+            );
+
+            const isDescription = cleanKey.includes('DESCRIPCION');
+            const isDate = cleanKey.includes('DATE') || cleanKey.includes('FECHA') || cleanKey.includes('PERIODO');
+            const isNumeric = cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO');
+
+            const rowItem = document.createElement('div');
+            rowItem.className = 'grid grid-cols-[110px_1fr] gap-6 px-2 py-1 border-b border-gray-800/50 items-center hover:bg-white/5';
+            
+            let inputHTML = '';
+
+            if (!isEditable) {
+                const isAliasTarget = cleanKey.endsWith('ALIAS'); // Para identificar donde inyectar el alias calculado
+                inputHTML = `
+                    <div class="flex items-center h-[24px] px-2 w-full justify-between text-gray-500 font-bold uppercase opacity-70 text-sm">
+                        <span class="truncate ${isAliasTarget ? 'visual-alias-span' : ''}">---</span>
+                        <input type="hidden" data-field="${key}" value="">
+                        <i data-lucide="${isCalculated ? 'calculator' : 'lock'}" class="w-3.5 h-3.5 text-gray-700"></i>
+                    </div>`;
+
+            } else if (isSelect) {
+                const optionsHtml = dictOptions.map(opt => 
+                    `<option value="${opt}" style="background-color: var(--bg); color: var(--txt);">${opt}</option>`
+                ).join('');
+
+                inputHTML = `
+                    <div class="relative w-full group px-1">
+                        <select data-field="${key}" onchange="updateTD102Alias()"
+                            style="background-color: var(--bg); border-color: var(--th); color: var(--p-soft);"
+                            class="border rounded px-2 py-0 text-sm font-bold w-full focus:outline-none transition-all appearance-none cursor-pointer pr-8 hover:brightness-110 shadow-sm">
+                            <option value="" style="background-color: var(--bg); color: var(--txt);">-- SELECCIONE --</option>
+                            ${optionsHtml}
+                        </select>
+                        <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
+                            <i data-lucide="search" class="w-3.5 h-3.5" style="color: var(--p-soft);"></i>
+                        </div>
+                    </div>`;
+
+            } else if (isDescription) {
+                inputHTML = `<textarea data-field="${key}" class="bg-gray-500/20 border border-transparent focus:border-blue-500/50 rounded px-2 py-1 text-sm text-gray-100 font-bold w-full focus:outline-none transition-colors resize-none h-[60px] uppercase"></textarea>`;
+
+            } else if (isDate) {
+                const d = new Date();
+                const hoy = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+                inputHTML = `<input type="date" data-field="${key}" value="${hoy}" class="custom-date-input bg-gray-500/20 border border-transparent focus:border-blue-500/50 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none transition-colors">`;
+            
+            } else if (isNumeric) {
+                inputHTML = `<input type="text" data-field="${key}" data-raw="0" value="0,00" onfocus="this.select()" oninput="applyAccountingMask(this)" class="bg-gray-500/20 border border-transparent focus:border-blue-500/50 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none text-right transition-colors">`;
+
+            } else {
+                // Lógica unificada para campos de texto: NUMERO (máscara) vs OTROS (update alias)
+                const isNumeroCard = cleanKey.endsWith('NUMERO');
+                const onInputCall = isNumeroCard ? 'applyCardMask(this)' : 'updateTD102Alias()';
+                const maxLen = isNumeroCard ? 'maxlength="19"' : '';
+
+                inputHTML = `<input type="text" data-field="${key}" oninput="${onInputCall}" ${maxLen} class="bg-gray-500/20 border border-transparent focus:border-blue-500/50 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none uppercase transition-colors">`;
+            }
+
+            rowItem.innerHTML = `
+                <span class="text-gray-200 font-medium uppercase text-[10px] self-start flex items-center">
+                    ${cfg.label || key}${asterisco}
+                </span>
+                ${inputHTML}`;
                 
-                // --- REGLA DE VISIBILIDAD ---
-                const visValue = String(cfg.visible || '').toLowerCase().trim();
-                if (visValue === "") return;
-
-                // --- MANEJO DE INPUTS OCULTOS REQUERIDOS POR SAVERECORD ---
-                if (cleanKey === idPrincipalName || cleanKey === idCuentaName) {
-                    const hiddenInput = document.createElement('input');
-                    hiddenInput.type = 'hidden';
-                    hiddenInput.dataset.field = key; 
-                    hiddenInput.value = ''; 
-                    content.appendChild(hiddenInput);
-                    return; 
-                }
-
-                // --- REGLAS DE EXCLUSIÓN VISUAL RESTANTES ---
-                if (cleanKey.endsWith('CUENTA2') || cleanKey.endsWith('IDOWNER') || cleanKey.includes('REGISTRO') || cleanKey.includes('TYPEREG')) return;
-
-                const isCalculated = cfg.Es_Calculado === true || String(cfg.Es_Calculado).toLowerCase() === "calc";
-                const isEditable = visValue === 'x' && cfg.editable !== false && !isCalculated;
-
-                const isRequired = cfg.Es_Obligatorio === true || String(cfg.Es_Obligatorio).toLowerCase() === "true";
-                const asterisco = isRequired ? '<span class="text-red-500 ml-1 font-bold">*</span>' : '';
-
-                // --- LÓGICA DE SELECT (DICCIONARIO + ALIASCUENTA) ---
-                const currentTableClean = String(currentTableName).trim().toUpperCase();
-                const dictKey = `${currentTableClean}|${cleanKey}`;
-                let dictOptions = dictionary[dictKey] || [];
-                
-                const isAliasField = cleanKey.endsWith('ALIASCUENTA');
-                
-                if (isAliasField && dictOptions.length === 0) {
-                    dictOptions = (window.dashboardState?.cuentas || []).map(c => c.ALIAS);
-                }
-
-                const isSelect = isEditable && dictOptions && dictOptions.length > 0 && (
-                    cleanKey.includes('MONEDA') || cleanKey.includes('MOVIMIENTO') || cleanKey.includes('TIPO') || isAliasField
-                );
-
-                const isDescription = cleanKey.includes('DESCRIPCION');
-                const isDate = cleanKey.includes('DATE') || cleanKey.includes('FECHA') || cleanKey.includes('PERIODO');
-                const isNumeric = cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO');
-
-                const rowItem = document.createElement('div');
-                rowItem.className = 'grid grid-cols-[110px_1fr] gap-6 px-2 py-1 border-b border-gray-800/50 items-center hover:bg-white/5';
-                
-                let inputHTML = '';
-
-                if (!isEditable) {
-                    const isAliasTarget = cleanKey.endsWith('ALIAS'); // Para identificar donde inyectar el alias calculado
-                    inputHTML = `
-                        <div class="flex items-center h-[24px] px-2 w-full justify-between text-gray-500 font-bold uppercase opacity-70 text-sm">
-                            <span class="truncate ${isAliasTarget ? 'visual-alias-span' : ''}">---</span>
-                            <input type="hidden" data-field="${key}" value="">
-                            <i data-lucide="${isCalculated ? 'calculator' : 'lock'}" class="w-3.5 h-3.5 text-gray-700"></i>
-                        </div>`;
-
-                } else if (isSelect) {
-                    const optionsHtml = dictOptions.map(opt => 
-                        `<option value="${opt}" style="background-color: var(--bg); color: var(--txt);">${opt}</option>`
-                    ).join('');
-
-                    inputHTML = `
-                        <div class="relative w-full group px-1">
-                            <select data-field="${key}" onchange="updateTD102Alias()"
-                                style="background-color: var(--bg); border-color: var(--th); color: var(--p-soft);"
-                                class="border rounded px-2 py-0 text-sm font-bold w-full focus:outline-none transition-all appearance-none cursor-pointer pr-8 hover:brightness-110 shadow-sm">
-                                <option value="" style="background-color: var(--bg); color: var(--txt);">-- SELECCIONE --</option>
-                                ${optionsHtml}
-                            </select>
-                            <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
-                                <i data-lucide="search" class="w-3.5 h-3.5" style="color: var(--p-soft);"></i>
-                            </div>
-                        </div>`;
-
-                } else if (isDescription) {
-                    inputHTML = `<textarea data-field="${key}" class="bg-gray-500/20 border border-transparent focus:border-blue-500/50 rounded px-2 py-1 text-sm text-gray-100 font-bold w-full focus:outline-none transition-colors resize-none h-[60px] uppercase"></textarea>`;
-
-                } else if (isDate) {
-                    const d = new Date();
-                    const hoy = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
-                    inputHTML = `<input type="date" data-field="${key}" value="${hoy}" class="custom-date-input bg-gray-500/20 border border-transparent focus:border-blue-500/50 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none transition-colors">`;
-                
-                } else if (isNumeric) {
-                    inputHTML = `<input type="text" data-field="${key}" data-raw="0" value="0,00" onfocus="this.select()" oninput="applyAccountingMask(this)" class="bg-gray-500/20 border border-transparent focus:border-blue-500/50 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none text-right transition-colors">`;
-
-                } else {
-                    // Lógica unificada para campos de texto: NUMERO (máscara) vs OTROS (update alias)
-                    const isNumeroCard = cleanKey.endsWith('NUMERO');
-                    const onInputCall = isNumeroCard ? 'applyCardMask(this)' : 'updateTD102Alias()';
-                    const maxLen = isNumeroCard ? 'maxlength="19"' : '';
-
-                    inputHTML = `<input type="text" data-field="${key}" oninput="${onInputCall}" ${maxLen} class="bg-gray-500/20 border border-transparent focus:border-blue-500/50 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none uppercase transition-colors">`;
-                }
-
-                rowItem.innerHTML = `
-                    <span class="text-gray-200 font-medium uppercase text-[10px] self-start flex items-center">
-                        ${cfg.label || key}${asterisco}
-                    </span>
-                    ${inputHTML}`;
-                    
-                content.appendChild(rowItem);
-            });
+            content.appendChild(rowItem);
+        });
 
         if (window.lucide) lucide.createIcons();
         
@@ -3249,100 +3247,100 @@ async function saveRecord() {
 
         // 3. RENDERIZADO DE CAMPOS
         Object.keys(row).forEach(key => {
-                    const cleanKey = key.toUpperCase();
+            const cleanKey = key.toUpperCase();
+            
+            // Exclusión de IDs de registro
+            if (cleanKey.includes('REGISTRO') || cleanKey.includes('TYPEREG') || cleanKey === idFieldName) return;
+            
+            const cfg = configMap[cleanKey] || {};
+            const visValue = String(cfg.visible || '').toLowerCase().trim();
+
+            const isIdCuenta = cleanKey === `${tablePrefix}CUENTA`;
+            if (visValue === "" && !isIdCuenta) return;
+
+            const isEditable = visValue === 'x' && cfg.editable !== false && cfg.Es_Calculado !== true;
+            const isRequired = cfg.Es_Obligatorio === true || String(cfg.Es_Obligatorio).toLowerCase() === "true";
+            const asterisco = isRequired ? '<span class="text-red-500 ml-1 font-bold">*</span>' : '';
+
+            const item = document.createElement('div');
+            item.className = 'grid grid-cols-[110px_1fr] px-2 py-1 border-b border-gray-800/50 last:border-0 hover:bg-white/5 justify-items-start';
+            
+            const val = row[key] || '';
+            let valueElement = '';
+
+            if (isIdCuenta) {
+                valueElement = `<input type="hidden" data-field="${key}" value="${val}">`;
+                item.className = 'hidden'; 
+            } 
+            else if (!isEditable) {
+                const isAliasTarget = cleanKey.endsWith('ALIAS');
+                valueElement = `
+                    <div class="flex items-center h-[24px] px-2 w-full justify-between">
+                        <span class="text-sm font-bold uppercase text-gray-500 opacity-90 ${isAliasTarget ? 'visual-alias-span' : ''}">${getFormattedValue(key, val)}</span>
+                        <input type="hidden" data-field="${key}" value="${val}">
+                        <i data-lucide="${cfg.Es_Calculado ? 'calculator' : 'lock'}" class="w-3.5 h-3.5 text-gray-700"></i>
+                    </div>`;
+            } 
+            else {
+                const dictKey = `${currentTableName}|${key}`.toUpperCase();
+                const dictOptions = dictionary[dictKey];
+                const isAliasField = cleanKey.endsWith('ALIASCUENTA');
+                const isSelect = dictOptions && dictOptions.length > 0 && (
+                    cleanKey.includes('MONEDA') || cleanKey.includes('MOVIMIENTO') || cleanKey.includes('TIPO') || isAliasField
+                );
+
+                if (isSelect) {
+                    const valActual = String(val || '').trim();
+                    let options = dictOptions || [];
                     
-                    // Exclusión de IDs de registro
-                    if (cleanKey.includes('REGISTRO') || cleanKey.includes('TYPEREG') || cleanKey === idFieldName) return;
-                    
-                    const cfg = configMap[cleanKey] || {};
-                    const visValue = String(cfg.visible || '').toLowerCase().trim();
-
-                    const isIdCuenta = cleanKey === `${tablePrefix}CUENTA`;
-                    if (visValue === "" && !isIdCuenta) return;
-
-                    const isEditable = visValue === 'x' && cfg.editable !== false && cfg.Es_Calculado !== true;
-                    const isRequired = cfg.Es_Obligatorio === true || String(cfg.Es_Obligatorio).toLowerCase() === "true";
-                    const asterisco = isRequired ? '<span class="text-red-500 ml-1 font-bold">*</span>' : '';
-
-                    const item = document.createElement('div');
-                    item.className = 'grid grid-cols-[110px_1fr] px-2 py-1 border-b border-gray-800/50 last:border-0 hover:bg-white/5 justify-items-start';
-                    
-                    const val = row[key] || '';
-                    let valueElement = '';
-
-                    if (isIdCuenta) {
-                        valueElement = `<input type="hidden" data-field="${key}" value="${val}">`;
-                        item.className = 'hidden'; 
-                    } 
-                    else if (!isEditable) {
-                        const isAliasTarget = cleanKey.endsWith('ALIAS');
-                        valueElement = `
-                            <div class="flex items-center h-[24px] px-2 w-full justify-between">
-                                <span class="text-sm font-bold uppercase text-gray-500 opacity-90 ${isAliasTarget ? 'visual-alias-span' : ''}">${getFormattedValue(key, val)}</span>
-                                <input type="hidden" data-field="${key}" value="${val}">
-                                <i data-lucide="${cfg.Es_Calculado ? 'calculator' : 'lock'}" class="w-3.5 h-3.5 text-gray-700"></i>
-                            </div>`;
-                    } 
-                    else {
-                        const dictKey = `${currentTableName}|${key}`.toUpperCase();
-                        const dictOptions = dictionary[dictKey];
-                        const isAliasField = cleanKey.endsWith('ALIASCUENTA');
-                        const isSelect = dictOptions && dictOptions.length > 0 && (
-                            cleanKey.includes('MONEDA') || cleanKey.includes('MOVIMIENTO') || cleanKey.includes('TIPO') || isAliasField
-                        );
-
-                        if (isSelect) {
-                            const valActual = String(val || '').trim();
-                            let options = dictOptions || [];
-                            
-                            if (isAliasField && options.length === 0) {
-                                options = (window.dashboardState?.cuentas || []).map(c => c.ALIAS);
-                            }
-
-                            const existeEnOpciones = options.some(opt => String(opt).trim() === valActual);
-                            const optionsHtml = options.map(opt => {
-                                const isSelected = String(opt).trim() === valActual;
-                                return `<option value="${opt}" ${isSelected ? 'selected' : ''} style="background-color: var(--bg); color: var(--txt);">${opt}</option>`;
-                            }).join('');
-
-                            valueElement = `
-                                <div class="relative w-full group">
-                                    <select data-field="${key}" onchange="updateTD102Alias()"
-                                        class="bg-transparent border border-gray-700 rounded px-2 py-0 text-sm font-bold w-full focus:outline-none appearance-none cursor-pointer pr-8 shadow-sm">
-                                        ${!existeEnOpciones ? `<option value="${valActual}" selected>${valActual || '-- SELECCIONE --'}</option>` : ''}
-                                        ${optionsHtml}
-                                    </select>
-                                    <div class="absolute inset-y-0 right-2 flex items-center pointer-events-none opacity-60">
-                                        <i data-lucide="search" class="w-3.5 h-3.5"></i>
-                                    </div>
-                                </div>`;
-                        } else if (cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('PERIODO')) {
-                            let dateISO = val.includes('/') ? val.split('/').reverse().join('-') : (val.includes('T') ? val.split('T')[0] : val);
-                            valueElement = `<input type="date" data-field="${key}" value="${dateISO}" class="bg-gray-800/50 border border-transparent focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none">`;
-                        } else if (cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO')) {
-                            valueElement = `<input type="text" data-field="${key}" data-raw="${val}" value="${getFormattedValue(key, val)}" onfocus="this.select()" oninput="applyAccountingMask(this)" class="bg-gray-800/50 border border-transparent focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full text-right focus:outline-none">`;
-                        } else if (cleanKey.includes('DESCRIPCION')) {
-                            valueElement = `<textarea data-field="${key}" class="bg-gray-800/30 border border-transparent focus:border-gray-500 rounded px-2 py-1 text-sm text-gray-100 font-bold w-full focus:outline-none resize-none h-[60px] uppercase">${val}</textarea>`;
-                        } else {
-                            // Lógica para campos de texto: NUMERO (máscara) vs OTROS (update alias)
-                            const isNumeroCard = cleanKey.endsWith('NUMERO');
-                            const onInputCall = isNumeroCard ? 'applyCardMask(this)' : 'updateTD102Alias()';
-                            const maxLen = isNumeroCard ? 'maxlength="19"' : '';
-
-                            valueElement = `<input type="text" data-field="${key}" value="${val}" oninput="${onInputCall}" ${maxLen} class="bg-gray-800/30 border border-transparent focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none uppercase">`;
-                        }
+                    if (isAliasField && options.length === 0) {
+                        options = (window.dashboardState?.cuentas || []).map(c => c.ALIAS);
                     }
 
-                    item.innerHTML = `<span class="text-gray-200 font-medium uppercase text-[10px] self-start flex items-center">${cfg.label || key}${asterisco}</span>${valueElement}`;
-                    content.appendChild(item);
-                });
+                    const existeEnOpciones = options.some(opt => String(opt).trim() === valActual);
+                    const optionsHtml = options.map(opt => {
+                        const isSelected = String(opt).trim() === valActual;
+                        return `<option value="${opt}" ${isSelected ? 'selected' : ''} style="background-color: var(--bg); color: var(--txt);">${opt}</option>`;
+                    }).join('');
 
-                // Aplicar máscara inicial al duplicar si el registro base ya tenía un número
-                const numInput = content.querySelector(`[data-field$="NUMERO"]`);
-                if (numInput && typeof applyCardMask === 'function') applyCardMask(numInput);
+                    valueElement = `
+                        <div class="relative w-full group">
+                            <select data-field="${key}" onchange="updateTD102Alias()"
+                                class="bg-transparent border border-gray-700 rounded px-2 py-0 text-sm font-bold w-full focus:outline-none appearance-none cursor-pointer pr-8 shadow-sm">
+                                ${!existeEnOpciones ? `<option value="${valActual}" selected>${valActual || '-- SELECCIONE --'}</option>` : ''}
+                                ${optionsHtml}
+                            </select>
+                            <div class="absolute inset-y-0 right-2 flex items-center pointer-events-none opacity-60">
+                                <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                            </div>
+                        </div>`;
+                } else if ((cleanKey.includes('FECHA') || cleanKey.includes('DATE')) && !cleanKey.includes('PERIODO')) {
+                    let dateISO = val.includes('/') ? val.split('/').reverse().join('-') : (val.includes('T') ? val.split('T')[0] : val);
+                    valueElement = `<input type="date" data-field="${key}" value="${dateISO}" class="bg-gray-800/50 border border-transparent focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none">`;
+                } else if (cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO')) {
+                    valueElement = `<input type="text" data-field="${key}" data-raw="${val}" value="${getFormattedValue(key, val)}" onfocus="this.select()" oninput="applyAccountingMask(this)" class="bg-gray-800/50 border border-transparent focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full text-right focus:outline-none">`;
+                } else if (cleanKey.includes('DESCRIPCION')) {
+                    valueElement = `<textarea data-field="${key}" class="bg-gray-800/30 border border-transparent focus:border-gray-500 rounded px-2 py-1 text-sm text-gray-100 font-bold w-full focus:outline-none resize-none h-[60px] uppercase">${val}</textarea>`;
+                } else {
+                    // Lógica para campos de texto: NUMERO (máscara) vs OTROS (update alias)
+                    const isNumeroCard = cleanKey.endsWith('NUMERO');
+                    const onInputCall = isNumeroCard ? 'applyCardMask(this)' : 'updateTD102Alias()';
+                    const maxLen = isNumeroCard ? 'maxlength="19"' : '';
 
-                if (window.lucide) lucide.createIcons();
-                if (typeof updateTD102Alias === 'function') updateTD102Alias();
+                    valueElement = `<input type="text" data-field="${key}" value="${val}" oninput="${onInputCall}" ${maxLen} class="bg-gray-800/30 border border-transparent focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none uppercase">`;
+                }
+            }
+
+            item.innerHTML = `<span class="text-gray-200 font-medium uppercase text-[10px] self-start flex items-center">${cfg.label || key}${asterisco}</span>${valueElement}`;
+            content.appendChild(item);
+        });
+
+        // Aplicar máscara inicial al duplicar si el registro base ya tenía un número
+        const numInput = content.querySelector(`[data-field$="NUMERO"]`);
+        if (numInput && typeof applyCardMask === 'function') applyCardMask(numInput);
+
+        if (window.lucide) lucide.createIcons();
+        if (typeof updateTD102Alias === 'function') updateTD102Alias();
 
         if (window.lucide) lucide.createIcons();
         
@@ -3354,152 +3352,125 @@ async function saveRecord() {
 
 <script>
 
-    async function extraerTextoDePdf(file) {
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            
-            // Usamos la instancia configurada con el worker
-            const loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
-            const pdf = await loadingTask.promise;
-            
-            let fullText = "";
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                // Unimos el texto con espacios para que las RegEx no fallen por palabras pegadas
-                fullText += textContent.items.map(item => item.str).join(" ") + " ";
-            }
-            
-            console.log("Texto extraído con éxito");
-            return fullText;
-        } catch (error) {
-            console.error("Error detallado de PDF.js:", error);
-            alert("No se pudo leer el PDF. Revisa la consola para más detalles.");
-            return null;
-        }
-    }
-
     function triggerPdfUpload() {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.pdf';
         input.onchange = async (e) => {
             const file = e.target.files[0];
-            if (file) await processAndShowModal(file);
+            if (file) await processAndShowModalHCM(file);
         };
         input.click();
     }
 
-async function processAndShowModal(file) {
-    try {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let fullText = "";
+    async function processAndShowModalHCM(file) {
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = "";
 
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            fullText += textContent.items.map(item => item.str).join(" ") + " ";
-        }
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                fullText += textContent.items.map(item => item.str).join(" ") + " ";
+            }
 
-        const bloqueFactura = extractRaw(fullText, /NOTAS ADICIONALES([\s\S]*?)se firma en:/);
+            const bloqueFactura = extractRaw(fullText, /NOTAS ADICIONALES([\s\S]*?)se firma en:/);
 
-        // 1. CREACIÓN DEL OBJETO DESDE EL PDF
-        const registroPdf = {
-            "TD101ID": "NUEVO_PDF",
-            "TD101POLIZA": extractRaw(fullText, /(\d+\s*-\s*\d+\s*-\s*\d+)/),
-            "TD101FECHAHEADER": extractRaw(fullText, /(\d{2}\/\d{2}\/\d{4})\s*Póliza Nro\./),
-            "TD101EMPRESA": extractRaw(bloqueFactura, /C\.I\. \/ R\.I\.F\. No\.:\s*([\s\S]*?)\s*Por Mercantil Seguros/i),
-            "TD101RIF": extractRaw(bloqueFactura, /([JVEG]-[\d-]+)/),
-            "TD101FRECUENCIA": "MENSUAL",
-            "TD101MONEDA": "USD",
-            "TD101FACTURA": extractRaw(bloqueFactura, /Factura Nº:\s*(\d+)/),
-            "TD101FECHAEMISION": extractRaw(bloqueFactura, /Fecha de Emisión:\s*(\d{2}\/\d{2}\/\d{4})/),
-            "TD101FACTURAPERIODO": extractRaw(bloqueFactura, /Desde \(dd\/mm\/aaaa\):\s*(\d{2}\/\d{2}\/\d{4}\s+\d{2}\/\d{2}\/\d{4})/)
-                                    .trim().replace(/\s+/, " al "),
-            "TD101MOVIMIENTO": extractRaw(bloqueFactura, /Tipo de Movimiento:\s*([\s\S]*?)\s*DATOS DE LA FACTURA/),
-            "TD101MONTOPRIMA": extractRaw(bloqueFactura, /Total Prima Bruta:\s*(-?[\d.,]+)/),
-            "TD101MONTOIGTF": extractRaw(bloqueFactura, /0,00\s+(-?[\d.,]+)\s+PAGO DIRECTO/),
-            "TD101MONTOTOTAL": extractRaw(bloqueFactura, /Total a Pagar:\s*(-?[\d.,]+)/),
-            "TD101ARCHIVO": file.name 
-        };
-
-        // --- 2. LÓGICA DE VALIDACIÓN DE DUPLICADOS (FRONTEND) ---
-        
-        const sourceData = (typeof TABLE_CACHE !== 'undefined' && TABLE_CACHE.data) 
-                            ? TABLE_CACHE.data 
-                            : (typeof originalData !== 'undefined' ? originalData : []);
-
-        if (sourceData.length > 0) {
-            // Auxiliar: Limpiador de montos
-            //const cleanM = (val) => String(val || "").replace(/[.,\s]/g, "");
-
-            // Auxiliar: Normalizador de fechas (ISO vs DD/MM/YYYY)
-            const toCompareDate = (val) => {
-                if (!val) return "";
-                let s = String(val).trim();
-                // Caso PDF: 02/04/2026 -> 2026-04-02
-                if (s.includes("/")) {
-                    const parts = s.split("/");
-                    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
-                }
-                // Caso Tabla (ISO): 2026-04-02T... -> 2026-04-02
-                if (s.includes("-") && s.includes("T")) return s.substring(0, 10);
-                return s;
+            // 1. CREACIÓN DEL OBJETO DESDE EL PDF
+            const registroPdf = {
+                "TD101ID": "NUEVO_PDF",
+                "TD101POLIZA": extractRaw(fullText, /(\d+\s*-\s*\d+\s*-\s*\d+)/),
+                "TD101FECHAHEADER": extractRaw(fullText, /(\d{2}\/\d{2}\/\d{4})\s*Póliza Nro\./),
+                "TD101EMPRESA": extractRaw(bloqueFactura, /C\.I\. \/ R\.I\.F\. No\.:\s*([\s\S]*?)\s*Por Mercantil Seguros/i),
+                "TD101RIF": extractRaw(bloqueFactura, /([JVEG]-[\d-]+)/),
+                "TD101FRECUENCIA": "MENSUAL",
+                "TD101MONEDA": "USD",
+                "TD101FACTURA": extractRaw(bloqueFactura, /Factura Nº:\s*(\d+)/),
+                "TD101FECHAEMISION": extractRaw(bloqueFactura, /Fecha de Emisión:\s*(\d{2}\/\d{2}\/\d{4})/),
+                "TD101FACTURAPERIODO": extractRaw(bloqueFactura, /Desde \(dd\/mm\/aaaa\):\s*(\d{2}\/\d{2}\/\d{4}\s+\d{2}\/\d{2}\/\d{4})/)
+                                        .trim().replace(/\s+/, " al "),
+                "TD101MOVIMIENTO": extractRaw(bloqueFactura, /Tipo de Movimiento:\s*([\s\S]*?)\s*DATOS DE LA FACTURA/),
+                "TD101MONTOPRIMA": extractRaw(bloqueFactura, /Total Prima Bruta:\s*(-?[\d.,]+)/),
+                "TD101MONTOIGTF": extractRaw(bloqueFactura, /0,00\s+(-?[\d.,]+)\s+PAGO DIRECTO/),
+                "TD101MONTOTOTAL": extractRaw(bloqueFactura, /Total a Pagar:\s*(-?[\d.,]+)/),
+                "TD101ARCHIVO": file.name 
             };
 
-            const nuevoP = String(registroPdf.TD101POLIZA || "").trim().toUpperCase();
-            const nuevoF = toCompareDate(registroPdf.TD101FECHAEMISION);
-            const nuevoM = cleanM(registroPdf.TD101MONTOTOTAL);
-            const nuevofx = cleanM(registroPdf.TD101FACTURA);
+            // --- 2. LÓGICA DE VALIDACIÓN DE DUPLICADOS (FRONTEND) ---
+            
+            const sourceData = (typeof TABLE_CACHE !== 'undefined' && TABLE_CACHE.data) 
+                                ? TABLE_CACHE.data 
+                                : (typeof originalData !== 'undefined' ? originalData : []);
 
-            const esDuplicado = sourceData.some((row) => {
-                const filaP = String(row.TD101POLIZA || "").trim().toUpperCase();
-                const filaF = toCompareDate(row.TD101FECHAEMISION);
-                const filaM = cleanM(row.TD101MONTOTOTAL);
-                const filafx = cleanM(row.TD101FACTURA);
-                return (filaP === nuevoP && filaF === nuevoF && filaM === nuevoM && filafx === nuevofx);
-            });
+            if (sourceData.length > 0) {
 
-            if (esDuplicado) {
-                const msg = `<b>¡POSIBLE DUPLICADO DETECTADO!</b><br><br>` +
-                            `<div class="text-left inline-block">` + // Contenedor para justificar a la izquierda
-                                `• <b>Póliza:</b> ${nuevoP}<br>` +
-                                `• <b>Recibo:</b> ${registroPdf.TD101FACTURA}<br>` +
-                                `• <b>Fecha:</b> ${registroPdf.TD101FECHAEMISION}<br>` +
-                                `• <b>Monto Total:</b> ${registroPdf.TD101MONTOTOTAL}` +
-                            `</div><br><br>` +
-                            `¿Desea abrir el modal y procesarlo de todos modos?`;
-                
-                // Usamos el modal del sistema con await
-                const continuar = await showSystemModal({ 
-                    title: 'Error de Duplicidad', 
-                    text: msg, 
-                    type: 'warning',
-                    showCancel: true 
+                // Auxiliar: Normalizador de fechas (ISO vs DD/MM/YYYY)
+                const toCompareDate = (val) => {
+                    if (!val) return "";
+                    let s = String(val).trim();
+                    // Caso PDF: 02/04/2026 -> 2026-04-02
+                    if (s.includes("/")) {
+                        const parts = s.split("/");
+                        if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+                    // Caso Tabla (ISO): 2026-04-02T... -> 2026-04-02
+                    if (s.includes("-") && s.includes("T")) return s.substring(0, 10);
+                    return s;
+                };
+
+                const nuevoP = String(registroPdf.TD101POLIZA || "").trim().toUpperCase();
+                const nuevoF = toCompareDate(registroPdf.TD101FECHAEMISION);
+                const nuevoM = cleanM(registroPdf.TD101MONTOTOTAL);
+                const nuevoFX = cleanM(registroPdf.TD101FACTURA);
+
+                const esDuplicado = sourceData.some((row) => {
+                    const filaP = String(row.TD101POLIZA || "").trim().toUpperCase();
+                    const filaF = toCompareDate(row.TD101FECHAEMISION);
+                    const filaM = cleanM(row.TD101MONTOTOTAL);
+                    const filaFX = cleanM(row.TD101FACTURA);
+                    return (filaP === nuevoP && filaF === nuevoF && filaM === nuevoM && filaFX === nuevoFX);
                 });
 
-                if (!continuar) {
-                    console.log("Carga de PDF cancelada por el usuario.");
-                    return; // Detiene el flujo
+                if (esDuplicado) {
+                    const msg = `<b>¡POSIBLE DUPLICADO DETECTADO!</b><br><br>` +
+                                `<div class="text-left inline-block">` + // Contenedor para justificar a la izquierda
+                                    `• <b>Póliza:</b> ${nuevoP}<br>` +
+                                    `• <b>Recibo:</b> ${registroPdf.TD101FACTURA}<br>` +
+                                    `• <b>Fecha:</b> ${registroPdf.TD101FECHAEMISION}<br>` +
+                                    `• <b>Monto Total:</b> ${registroPdf.TD101MONTOTOTAL}` +
+                                `</div><br><br>` +
+                                `¿Desea abrir el modal y procesarlo de todos modos?`;
+                    
+                    // Usamos el modal del sistema con await
+                    const continuar = await showSystemModal({ 
+                        title: 'Error de Duplicidad', 
+                        text: msg, 
+                        type: 'warning',
+                        showCancel: true 
+                    });
+
+                    if (!continuar) {
+                        console.log("Carga de PDF cancelada por el usuario.");
+                        return; // Detiene el flujo
+                    }
                 }
             }
+
+            // --- 3. PROSEGUIR CON LA CARGA ---
+            
+            localStorage.setItem('DATA_PDF', JSON.stringify(registroPdf));
+            renderPdfAsEditable(registroPdf);
+
+        } catch (error) {
+            console.error("Error crítico en processAndShowModalHCM:", error);
+            await showSystemModal({ 
+                title: 'Error de Procesamiento', 
+                text: 'No se pudo leer el contenido del PDF. Verifique el formato.', 
+                type: 'danger' 
+            });
         }
-
-        // --- 3. PROSEGUIR CON LA CARGA ---
-        
-        localStorage.setItem('DATA_PDF', JSON.stringify(registroPdf));
-        renderPdfAsEditable(registroPdf);
-
-    } catch (error) {
-        console.error("Error crítico en processAndShowModal:", error);
-        await showSystemModal({ 
-            title: 'Error de Procesamiento', 
-            text: 'No se pudo leer el contenido del PDF. Verifique el formato.', 
-            type: 'danger' 
-        });
     }
-}
 
     async function generarYVincularPdf() {
         // Llamada a tu función de GAS
