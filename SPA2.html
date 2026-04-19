@@ -576,7 +576,7 @@
 
         // 5. FECHAS Y HORAS 
         if (cleanKey.includes('REGISTRODATA') || cleanKey.includes('VIGENCIA')) return formatDateTime(value);
-        if (cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('PERIODO')) return formatDate(value);
+        if (cleanKey.includes('FECHA') || cleanKey.includes('DATE')) return formatDate(value);
         
         // 6. TRATAMIENTO NUMÉRICO 
         const esAlfanumerico = /[a-zA-Z]/.test(stringValue) && /\d/.test(stringValue);
@@ -996,7 +996,7 @@ function renderTable(data) {
             }
 
             // Formateo de Fechas
-            if (cleanH.includes('FECHA') || cleanH.includes('DATE') || cleanH.includes('PERIODO')) {
+            if (cleanH.includes('FECHA') || cleanH.includes('DATE')) {
                 const d = new Date(row[h]);
                 if (!isNaN(d.getTime())) {
                     val = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
@@ -2166,7 +2166,7 @@ function showSystemModal({
 
     async function setColumnFilter(idx) {
         const col = currentHeadersConfig[idx];
-        const isDate = col.label.toUpperCase().includes('FECHA') || col.label.toUpperCase().includes('DATE') || col.label.toUpperCase().includes('PERIODO');
+        const isDate = col.label.toUpperCase().includes('FECHA') || col.label.toUpperCase().includes('DATE') || col.label.toUpperCase().includes('VIGENCIA');
         
         let initialValue = col.filterValue || '';
 
@@ -2399,7 +2399,15 @@ function showSystemModal({
             currentUser: userId
         };
 
-        const createdRecord = await executeSubmit(finalPayload); 
+
+
+console.log("-----------------------------------------");
+console.table("🚀 PAYLOAD DE SALIDA (A GAS):", finalPayload);
+console.log("-----------------------------------------");
+
+        const createdRecord = await executeSubmit(finalPayload);   
+
+console.table("✅ RESPUESTA DEL SERVIDOR (RESULTADO):", createdRecord);        
 
         if (createdRecord) {
             const loaderLabel = document.querySelector('#global-loader span');
@@ -2413,6 +2421,10 @@ function showSystemModal({
             
             await showSystemModal({ title: 'Proceso Completado', text: 'Solicitud ejecutada correctamente.', type: 'info' });
             if (createdRecord) openDetailModal(createdRecord);
+            normalizeToolbar();
+            ['Duplicar', 'Borrar', 'Nuevo', 'Editar'].forEach(disableButton);
+            document.getElementById('btn-modal-save')?.classList.add('hidden');
+            
         } else {
             toggleGlobalLoader(false);
             showSystemModal({ title: 'Error', text: 'No se pudo guardar el registro.', type: 'error' });
@@ -2683,7 +2695,7 @@ function showSystemModal({
             const isRequired = cfg.Es_Obligatorio === true || String(cfg.Es_Obligatorio).toLowerCase() === "true";
             const asterisco = isRequired ? '<span class="text-red-500 ml-1 font-bold">*</span>' : '';
             const istoggle = cleanKey.includes('TYPEREG');
-            const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('VIGENCIA') || cleanKey.includes('PERIODO');
+            const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('VIGENCIA');
             const isNumeric = cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO');
             
             const dictKey = `${currentTableName}|${key}`.toUpperCase();
@@ -2898,7 +2910,7 @@ function showSystemModal({
             );
 
             const isDescription = cleanKey.includes('DESCRIPCION');
-            const isDate = cleanKey.includes('DATE') || cleanKey.includes('FECHA') || cleanKey.includes('PERIODO');
+            const isDate = cleanKey.includes('DATE') || cleanKey.includes('FECHA');
             const isNumeric = cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO');
 
             const rowItem = document.createElement('div');
@@ -3054,7 +3066,7 @@ function showSystemModal({
 
             // Identificación de tipos para el renderizado
             const isDescription = cleanKey.includes('DESCRIPCION');
-            const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE') || cleanKey.includes('PERIODO');
+            const isDate = cleanKey.includes('FECHA') || cleanKey.includes('DATE');
             const isNumeric = cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO');
             
             const rowItem = document.createElement('div');
@@ -3314,7 +3326,7 @@ function showSystemModal({
                                 <i data-lucide="search" class="w-3.5 h-3.5"></i>
                             </div>
                         </div>`;
-                } else if ((cleanKey.includes('FECHA') || cleanKey.includes('DATE')) && !cleanKey.includes('PERIODO')) {
+                } else if ((cleanKey.includes('FECHA') || cleanKey.includes('DATE')) && !cleanKey.includes('VIGENCIA')) {
                     let dateISO = val.includes('/') ? val.split('/').reverse().join('-') : (val.includes('T') ? val.split('T')[0] : val);
                     valueElement = `<input type="date" data-field="${key}" value="${dateISO}" class="bg-gray-800/50 border border-transparent focus:border-gray-500 rounded px-2 py-0 text-sm text-gray-100 font-bold w-full focus:outline-none">`;
                 } else if (cleanKey.includes('IMPORTE') || cleanKey.includes('MONTO')) {
