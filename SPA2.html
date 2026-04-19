@@ -3404,7 +3404,8 @@ function showSystemModal({
                                 : (typeof originalData !== 'undefined' ? originalData : []);
 
             if (sourceData.length > 0) {
-
+                // Auxiliar: Normalizador de montos
+                const cleanM = (val) => String(val || "").replace(/[.,\s]/g, "");
                 // Auxiliar: Normalizador de fechas (ISO vs DD/MM/YYYY)
                 const toCompareDate = (val) => {
                     if (!val) return "";
