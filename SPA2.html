@@ -900,7 +900,7 @@ function renderTable(data) {
         const cfg = configMap[h] || {};
         
         if (String(cfg.visible || '').toLowerCase() !== 'x' && String(cfg.visible || '').toLowerCase() !== 'xx') return;
-        if (cleanH.endsWith('TYPEREG') || cleanH.endsWith('DESCRIPCION') || cleanH.endsWith('ARCHIVO')) return;
+        //if (cleanH.endsWith('TYPEREG') || cleanH.endsWith('DESCRIPCION') || cleanH.endsWith('ARCHIVO')) return;
 
         const colFilterObj = currentHeadersConfig.find(c => c.id === h);
         const hasActiveFilter = colFilterObj && colFilterObj.filterValue && colFilterObj.filterValue.trim() !== "";
