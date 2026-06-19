@@ -900,7 +900,7 @@ function renderTable(data) {
         const cfg = configMap[h] || {};
         
         if (String(cfg.visible || '').toLowerCase() !== 'x' && String(cfg.visible || '').toLowerCase() !== 'xx') return;
-        //if (cleanH.endsWith('TYPEREG') || cleanH.endsWith('DESCRIPCION') || cleanH.endsWith('ARCHIVO')) return;
+        if (cleanH.endsWith('TYPEREGx') || cleanH.endsWith('DESCRIPCION') || cleanH.endsWith('ARCHIVO')) return;
 
         const colFilterObj = currentHeadersConfig.find(c => c.id === h);
         const hasActiveFilter = colFilterObj && colFilterObj.filterValue && colFilterObj.filterValue.trim() !== "";
@@ -964,7 +964,7 @@ function renderTable(data) {
             const cleanH = h.toUpperCase();
 
             if (String(cfg.visible || '').toLowerCase() !== 'x' && String(cfg.visible || '').toLowerCase() !== 'xx') return;
-            if (cleanH.endsWith('TYPEREG') || cleanH.endsWith('DESCRIPCION') || cleanH.endsWith('ARCHIVO')) return;
+            if (cleanH.endsWith('TYPEREGx') || cleanH.endsWith('DESCRIPCION') || cleanH.endsWith('ARCHIVO')) return;
 
             const td = document.createElement('td');
             td.className = `px-3 py-1 text-[12px] font-bold ${esDuplicado ? '' : 'text-gray-300'}`;
@@ -3822,7 +3822,7 @@ async function generarYVincularPdf() {
                     // Solo exportamos lo que es visible (X o XX)
                     const vis = String(cfg.visible || '').toLowerCase();
                     if (vis !== 'x' && vis !== 'xx') return;
-                    //if (cleanH.endsWith('TYPEREG')) return;
+                    if (cleanH.endsWith('TYPEREGx')) return;
 
                     // --- LÓGICA DE FORMATEO (Igual a renderTable) ---
                     let val = row[h];
